@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// Einzelne Buchung. Beträge immer positiv in Cent, Richtung über `type`.
+model Transaction {
+  id              String         @id @default(cuid())
+  amountCents     Int
+  type            String // "INCOME" | "EXPENSE"
+  category        String
+  date            DateTime
+  note            String?
+  recurringRuleId String?
+  recurringRule   RecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+
+  @@unique([recurringRuleId, date])
+  @@index([date])
+}
+
+/// Vorlage für wiederkehrende Buchungen (Abos, Gehalt, Miete ...).
+model RecurringRule {
+  id           String        @id @default(cuid())
+  amountCents  Int
+  type         String // "INCOME" | "EXPENSE"
+  category     String
+  note         String?
+  interval     String // "MONTHLY" | "YEARLY"
+  startDate    DateTime
+  nextDue      DateTime
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+}
+
+/// Ein Kauf (Lot) eines Wertpapiers. Preis in der Handelswährung des Assets.
+model Asset {
+  id            String   @id @default(cuid())
+  symbol        String
+  name          String?
+  shares        Float
+  buyPriceCents Int
+  currency      String
+  buyDate       DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([symbol])
+}
+
+/// Zwischenspeicher für Kurse (Aktien und FX, z.B. "USDEUR=X").
+model PriceCache {
+  symbol    String   @id
+  price     Float
+  currency  String
+  name      String?
+  fetchedAt DateTime
+}
