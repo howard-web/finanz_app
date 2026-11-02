@@ -4,9 +4,9 @@ import { connection } from "next/server";
 import { ExpenseBars } from "@/components/charts/ExpenseBars";
 import { PortfolioLine } from "@/components/charts/PortfolioLine";
 import { MonthFilter } from "@/components/MonthFilter";
-import { EmptyState, Notice, PageHeader, Skeleton, StatCard, toneOf } from "@/components/ui";
-import { getCashBalanceCents, getExpensesByCategory, getMonthlyFixedCostsCents } from "@/lib/cashflow";
-import { currentMonth, formatMonth, isValidMonth } from "@/lib/dates";
+import { EmptyState, Notice, PageHeader, Skeleton, StatCard } from "@/components/ui";
+import { getCashBalance, getExpensesByCategory, getMonthlyFixedCostsCents } from "@/lib/cashflow";
+import { currentMonth, formatDate, formatMonth, isValidMonth } from "@/lib/dates";
 import { formatCents, formatEUR, formatPercent } from "@/lib/money";
 import { getPortfolio, getPortfolioHistory } from "@/lib/portfolio";
 import { materializeRecurring } from "@/lib/recurring";
@@ -43,19 +43,33 @@ function StatsSkeleton() {
 async function Stats() {
   await connection();
   await materializeRecurring();
-  const [cashCents, portfolio, fixedCents] = await Promise.all([
-    getCashBalanceCents(),
+  const [cash, portfolio, fixedCents] = await Promise.all([
+    getCashBalance(),
     getPortfolio(),
     getMonthlyFixedCostsCents(),
   ]);
-  const netWorth = cashCents / 100 + portfolio.totalValueEUR;
+  const netWorth = cash.balanceCents / 100 + portfolio.totalValueEUR;
 
   return (
     <>
       {portfolio.hasStaleData && <Notice>Einige Kurse sind veraltet. Net Worth basiert auf den zuletzt bekannten Werten.</Notice>}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Net Worth" value={formatEUR(netWorth)} hint="Cashflow-Saldo + Depotwert" />
-        <StatCard label="Cashflow-Saldo" value={formatCents(cashCents)} tone={toneOf(cashCents)} hint="alle Buchungen" />
+        <StatCard label="Net Worth" value={formatEUR(netWorth)} hint="Kontostand + Depotwert" />
+        <StatCard
+          label="Kontostand"
+          value={formatCents(cash.balanceCents)}
+          tone={cash.balanceCents < 0 ? "negative" : "neutral"}
+          hint={
+            cash.opening ? (
+              <>Startguthaben {formatCents(cash.opening.cents)} am {formatDate(cash.opening.date)} + Buchungen</>
+            ) : (
+              <>
+                Saldo aller Buchungen ·{" "}
+                <Link href="/settings" className="underline">Startguthaben setzen</Link>
+              </>
+            )
+          }
+        />
         <StatCard
           label="Depotwert"
           value={formatEUR(portfolio.totalValueEUR)}

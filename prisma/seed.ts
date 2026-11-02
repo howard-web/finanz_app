@@ -16,6 +16,10 @@ async function main() {
   await db.recurringRule.deleteMany();
   await db.asset.deleteMany();
 
+  // Startguthaben: Kontostand am Tag vor der ersten Beispielbuchung
+  const opening = { openingBalanceCents: 245000, openingBalanceDate: d(3, 0) };
+  await db.appSettings.upsert({ where: { id: 1 }, create: { id: 1, ...opening }, update: opening });
+
   // Wiederkehrend: werden beim ersten Seitenaufruf automatisch gebucht.
   await db.recurringRule.createMany({
     data: [

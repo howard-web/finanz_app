@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/recurring", label: "Abos & Daueraufträge" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/import", label: "CSV-Import" },
+  { href: "/settings", label: "Einstellungen" },
 ] as const;
 
 export function Nav() {

@@ -68,3 +68,13 @@ model PriceCache {
   name      String?
   fetchedAt DateTime
 }
+
+/// App-weite Einstellungen (genau eine Zeile, id = 1).
+model AppSettings {
+  id                  Int       @id @default(1)
+  /// Kontostand am Ende des Stichtags; darf negativ sein (Dispo)
+  openingBalanceCents Int       @default(0)
+  /// Stichtag; null = kein Startguthaben gesetzt
+  openingBalanceDate  DateTime?
+  updatedAt           DateTime  @updatedAt
+}

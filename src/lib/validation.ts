@@ -92,6 +92,18 @@ export const assetSchema = z.object({
   buyDate: dateField,
 });
 
+export const openingBalanceSchema = z.object({
+  amount: z.string().transform((v, ctx) => {
+    const cents = parseAmountToCents(v);
+    if (cents === null) {
+      ctx.addIssue({ code: "custom", message: "Bitte einen Betrag eingeben (negativ bei Dispo)." });
+      return z.NEVER;
+    }
+    return cents;
+  }),
+  date: dateField,
+});
+
 export type FormState = {
   ok?: boolean;
   message?: string;

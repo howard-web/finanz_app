@@ -22,7 +22,8 @@ npm run dev
 - **Kurse** werden in `PriceCache` bis zu 6 h zwischengespeichert. Ist Yahoo nicht erreichbar, wird der letzte bekannte Kurs angezeigt und als veraltet markiert.
 - **FX:** Fremdwährungen werden mit dem aktuellen Kurs nach EUR umgerechnet (`EUR=X`, `GBPEUR=X` usw.). GBp/Pence werden durch 100 geteilt.
 - **Depotverlauf:** historische Schlusskurse × Bestand ab Kaufdatum.
-- **Net Worth** = Saldo aller Buchungen + aktueller Depotwert.
+- **Net Worth** = Kontostand + aktueller Depotwert.
+- **Kontostand** = Startguthaben (Kontostand am Ende eines Stichtags, unter `/settings`) + alle Buchungen *nach* dem Stichtag. Ohne Startguthaben: Saldo aller Buchungen. Buchungen am/vor dem Stichtag zählen weiter in den Monatsauswertungen.
 - **CSV-Import** (`/import`): Die Datei wird im Browser geparst (Zeichensatz, Trennzeichen und Kopfzeile werden automatisch erkannt; Spalten für Sparkasse, ING, DKB, comdirect, Volksbank und N26). Der Server prüft gegen die DB:
   - Bereits importierte Zeilen erkennt er über `importKey` (Datum + Betrag + Text + laufende Nummer).
   - Mögliche Dubletten sind manuelle oder Abo-Buchungen mit gleichem Betrag innerhalb von ±3 Tagen.

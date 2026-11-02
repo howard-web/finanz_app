@@ -2,15 +2,45 @@ import "server-only";
 import { db } from "@/lib/db";
 import { monthRange } from "@/lib/dates";
 
-/** Saldo aller Buchungen (Einnahmen − Ausgaben) in Cent. */
-export async function getCashBalanceCents(): Promise<number> {
-  const groups = await db.transaction.groupBy({ by: ["type"], _sum: { amountCents: true } });
-  let balance = 0;
+export type CashBalance = {
+  /** Aktueller Kontostand in Cent (Startguthaben + Buchungen nach dem Stichtag). */
+  balanceCents: number;
+  /** Startguthaben, falls gesetzt. */
+  opening: { cents: number; date: Date } | null;
+  /** Summe der Buchungen, die in den Kontostand einfließen. */
+  flowCents: number;
+  /** Buchungen am/vor dem Stichtag, die ignoriert werden (im Startguthaben enthalten). */
+  ignoredCount: number;
+};
+
+/**
+ * Kontostand: Startguthaben am Ende des Stichtags + alle Buchungen danach.
+ * Ohne Startguthaben: Saldo aller Buchungen.
+ */
+export async function getCashBalance(): Promise<CashBalance> {
+  const settings = await db.appSettings.findUnique({ where: { id: 1 } });
+  const opening =
+    settings?.openingBalanceDate != null
+      ? { cents: settings.openingBalanceCents, date: settings.openingBalanceDate }
+      : null;
+
+  const where = opening ? { date: { gt: opening.date } } : {};
+  const [groups, ignoredCount] = await Promise.all([
+    db.transaction.groupBy({ by: ["type"], where, _sum: { amountCents: true } }),
+    opening ? db.transaction.count({ where: { date: { lte: opening.date } } }) : 0,
+  ]);
+
+  let flowCents = 0;
   for (const g of groups) {
     const sum = g._sum.amountCents ?? 0;
-    balance += g.type === "INCOME" ? sum : -sum;
+    flowCents += g.type === "INCOME" ? sum : -sum;
   }
-  return balance;
+  return {
+    balanceCents: (opening?.cents ?? 0) + flowCents,
+    opening,
+    flowCents,
+    ignoredCount,
+  };
 }
 
 export async function getMonthTotals(month: string) {
