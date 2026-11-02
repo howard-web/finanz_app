@@ -17,7 +17,7 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
           <tr>
             <th className="th-cell">Datum</th>
             <th className="th-cell">Kategorie</th>
-            <th className="th-cell">Notiz</th>
+            <th className="th-cell">Gegenpartei / Notiz</th>
             <th className="th-cell text-right">Betrag</th>
             <th className="th-cell" />
           </tr>
@@ -36,7 +36,10 @@ export function TransactionList({ transactions }: { transactions: Transaction[] 
                   )}
                 </span>
               </td>
-              <td className="td-cell max-w-xs truncate text-stone-500">{t.note}</td>
+              <td className="td-cell max-w-xs">
+                {t.counterparty && <div className="truncate text-stone-800">{t.counterparty}</div>}
+                <div className="truncate text-xs text-stone-500" title={t.note ?? undefined}>{t.note}</div>
+              </td>
               <td
                 className={`td-cell text-right font-medium whitespace-nowrap tabular-nums ${
                   t.type === "INCOME" ? "text-emerald-700" : "text-stone-900"

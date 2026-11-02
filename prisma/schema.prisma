@@ -17,10 +17,18 @@ model Transaction {
   note            String?
   recurringRuleId String?
   recurringRule   RecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+  /// Gegenpartei (Empfänger/Auftraggeber), v.a. aus CSV-Importen
+  counterparty    String?
+  /// Eindeutiger Schlüssel einer importierten Zeile (verhindert Doppelimporte)
+  importKey       String?        @unique
+  /// Kennung des Imports, für "Import rückgängig machen"
+  importBatch     String?
   createdAt       DateTime       @default(now())
 
   @@unique([recurringRuleId, date])
   @@index([date])
+  @@index([importBatch])
+  @@index([counterparty])
 }
 
 /// Vorlage für wiederkehrende Buchungen (Abos, Gehalt, Miete ...).

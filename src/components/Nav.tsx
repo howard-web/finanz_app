@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/transactions", label: "Cashflow" },
   { href: "/recurring", label: "Abos & Daueraufträge" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/import", label: "CSV-Import" },
 ] as const;
 
 export function Nav() {

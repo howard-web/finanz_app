@@ -23,6 +23,11 @@ npm run dev
 - **FX:** Fremdwährungen werden mit dem aktuellen Kurs nach EUR umgerechnet (`EUR=X`, `GBPEUR=X` usw.). GBp/Pence werden durch 100 geteilt.
 - **Depotverlauf:** historische Schlusskurse × Bestand ab Kaufdatum.
 - **Net Worth** = Saldo aller Buchungen + aktueller Depotwert.
+- **CSV-Import** (`/import`): Die Datei wird im Browser geparst (Zeichensatz, Trennzeichen und Kopfzeile werden automatisch erkannt; Spalten für Sparkasse, ING, DKB, comdirect, Volksbank und N26). Der Server prüft gegen die DB:
+  - Bereits importierte Zeilen erkennt er über `importKey` (Datum + Betrag + Text + laufende Nummer).
+  - Mögliche Dubletten sind manuelle oder Abo-Buchungen mit gleichem Betrag innerhalb von ±3 Tagen.
+  - Kategorien werden aus früheren Buchungen derselben Gegenpartei gelernt, sonst per Schlüsselwort-Regeln (`src/lib/import/rules.ts`) vorgeschlagen.
+  - Jeder Import lässt sich über `importBatch` rückgängig machen.
 
 ## Struktur
 
