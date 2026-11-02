@@ -2,21 +2,23 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { HandCoins } from "lucide-react";
 import { connection } from "next/server";
-import { ExpenseBars } from "@/components/charts/ExpenseBars";
+import { ExpenseDonut } from "@/components/charts/ExpenseDonut";
 import { PortfolioLine } from "@/components/charts/PortfolioLine";
 import { MonthFilter } from "@/components/MonthFilter";
-import { EmptyState, Notice, PageHeader, Skeleton, StatCard } from "@/components/ui";
+import { EmptyState, Notice, PageHeader, Skeleton, StatCard, toneOf } from "@/components/ui";
+import { getI18n } from "@/i18n/server";
+import { tf } from "@/i18n/translate";
 import { getCashBalance, getExpensesByCategory, getMonthlyFixedCostsCents } from "@/lib/cashflow";
-import { currentMonth, formatDate, formatMonth, isValidMonth } from "@/lib/dates";
-import { formatCents, formatEUR, formatPercent } from "@/lib/money";
+import { currentMonth, isValidMonth } from "@/lib/dates";
 import { getDividendProposals } from "@/lib/dividends";
 import { getPortfolio, getPortfolioHistory } from "@/lib/portfolio";
 import { materializeRecurring } from "@/lib/recurring";
 
-export default function DashboardPage({ searchParams }: PageProps<"/">) {
+export default async function DashboardPage({ searchParams }: PageProps<"/[lang]">) {
+  const { t } = await getI18n();
   return (
     <>
-      <PageHeader title="Dashboard" subtitle="Dein Überblick über Konto, Depot und Ausgaben" />
+      <PageHeader title={t.dashboard.title} subtitle={t.dashboard.subtitle} />
       <Suspense fallback={null}>
         <DividendNotice />
       </Suspense>
@@ -37,17 +39,20 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
 
 async function DividendNotice() {
   await connection();
+  const { t, fmt, href } = await getI18n();
   const { proposals } = await getDividendProposals();
   if (proposals.length === 0) return null;
-  const gross = proposals.reduce((s, p) => s + p.grossEUR, 0);
+  const gross = fmt.eur(proposals.reduce((s, p) => s + p.grossEUR, 0));
   return (
     <Link
-      href="/dividends"
+      href={href("/dividends")}
       className="mb-5 flex items-center justify-between gap-2 rounded-xl border border-accent-line bg-accent-soft px-4 py-3 text-sm text-accent-ink hover:bg-accent/15"
     >
       <span>
         <HandCoins aria-hidden className="mr-2 inline size-[1.1em] align-[-0.15em]" />
-        {proposals.length} neue Dividende{proposals.length === 1 ? "" : "n"} erkannt ({formatEUR(gross)} brutto). Jetzt prüfen und buchen.
+        {proposals.length === 1
+          ? tf(t.dashboard.dividendNoticeOne, { gross })
+          : tf(t.dashboard.dividendNoticeMany, { count: proposals.length, gross })}
       </span>
       <span aria-hidden>→</span>
     </Link>
@@ -66,6 +71,8 @@ function StatsSkeleton() {
 
 async function Stats() {
   await connection();
+  const { t, fmt, href } = await getI18n();
+  const d = t.dashboard;
   await materializeRecurring();
   const [cash, portfolio, fixedCents] = await Promise.all([
     getCashBalance(),
@@ -76,81 +83,88 @@ async function Stats() {
 
   return (
     <>
-      {portfolio.hasStaleData && <Notice>Einige Kurse sind veraltet. Net Worth basiert auf den zuletzt bekannten Werten.</Notice>}
+      {portfolio.hasStaleData && <Notice>{d.staleNotice}</Notice>}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard featured label="Net Worth" value={formatEUR(netWorth)} hint="Kontostand + Depotwert" />
+        <StatCard featured tone={toneOf(netWorth)} label={d.netWorth} value={fmt.eur(netWorth)} hint={d.netWorthHint} />
         <StatCard
-          label="Kontostand"
-          value={formatCents(cash.balanceCents)}
-          tone={cash.balanceCents < 0 ? "negative" : "neutral"}
+          label={d.balance}
+          value={fmt.cents(cash.balanceCents)}
+          tone={toneOf(cash.balanceCents)}
           hint={
             cash.opening ? (
-              <>Startguthaben {formatCents(cash.opening.cents)} am {formatDate(cash.opening.date)} + Buchungen</>
+              tf(d.balanceWithOpening, { amount: fmt.cents(cash.opening.cents), date: fmt.date(cash.opening.date) })
             ) : (
               <>
-                Saldo aller Buchungen ·{" "}
-                <Link href="/settings" className="underline">Startguthaben setzen</Link>
+                {d.balanceAllBookings} ·{" "}
+                <Link href={href("/settings")} className="underline">{d.setOpening}</Link>
               </>
             )
           }
         />
         <StatCard
-          label="Depotwert"
-          value={formatEUR(portfolio.totalValueEUR)}
+          label={d.portfolioValue}
+          value={fmt.eur(portfolio.totalValueEUR)}
           hint={
             portfolio.positions.length > 0 ? (
               <span className={portfolio.totalPnlEUR >= 0 ? "text-pos" : "text-neg"}>
-                G/V {formatEUR(portfolio.totalPnlEUR)}
-                {portfolio.totalPnlPct !== null && ` (${formatPercent(portfolio.totalPnlPct)})`}
+                {d.pnlShort} {fmt.eur(portfolio.totalPnlEUR)}
+                {portfolio.totalPnlPct !== null && ` (${fmt.percent(portfolio.totalPnlPct)})`}
               </span>
             ) : (
-              "noch keine Positionen"
+              d.noPositions
             )
           }
         />
-        <StatCard label="Fixkosten / Monat" value={formatCents(fixedCents)} hint={<Link href="/recurring" className="underline">Abos ansehen</Link>} />
+        <StatCard
+          label={d.fixedCosts}
+          value={fmt.cents(fixedCents)}
+          hint={<Link href={href("/recurring")} className="underline">{d.viewSubscriptions}</Link>}
+        />
       </div>
     </>
   );
 }
 
-async function ExpensesCard({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
+async function ExpensesCard({ searchParams }: { searchParams: PageProps<"/[lang]">["searchParams"] }) {
   await connection();
+  const { t, fmt } = await getI18n();
   const { month: monthParam } = await searchParams;
   const month = isValidMonth(monthParam) ? monthParam : currentMonth();
   await materializeRecurring();
   const rows = await getExpensesByCategory(month);
-  const total = rows.reduce((s, r) => s + r.cents, 0);
-  const data = rows.map((r) => ({ category: r.category, amount: r.cents / 100, share: r.cents / total }));
+  const data = rows.map((r) => ({ category: r.category, amount: r.cents / 100 }));
 
   return (
     <section className="card">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="font-semibold">Ausgaben nach Kategorie</h2>
-          <p className="text-sm text-ink-3">
-            {formatMonth(month)}: {formatCents(total)}
-          </p>
+          <h2 className="font-semibold">{t.dashboard.expensesTitle}</h2>
+          <p className="text-sm text-ink-3">{t.dashboard.expensesSubtitle}</p>
         </div>
         <MonthFilter month={month} basePath="/" />
       </div>
-      {data.length > 0 ? <ExpenseBars data={data} /> : <EmptyState>Keine Ausgaben in diesem Monat.</EmptyState>}
+      {data.length > 0 ? (
+        <ExpenseDonut data={data} totalLabel={fmt.month(month)} />
+      ) : (
+        <EmptyState>{t.dashboard.noExpenses}</EmptyState>
+      )}
     </section>
   );
 }
 
 async function PortfolioCard() {
   await connection();
+  const { t, href } = await getI18n();
   const history = await getPortfolioHistory();
   return (
     <section className="card">
-      <h2 className="font-semibold">Depotwert-Entwicklung</h2>
-      <p className="mb-2 text-sm text-ink-3">Historische Schlusskurse × Bestand ab Kaufdatum, in EUR</p>
+      <h2 className="font-semibold">{t.dashboard.portfolioTitle}</h2>
+      <p className="mb-2 text-sm text-ink-3">{t.dashboard.portfolioSubtitle}</p>
       {history.length > 1 ? (
         <PortfolioLine data={history} />
       ) : (
         <EmptyState>
-          Noch keine Kursdaten. <Link href="/portfolio" className="underline">Wertpapier hinzufügen</Link>
+          {t.dashboard.noPriceData} <Link href={href("/portfolio")} className="underline">{t.dashboard.addSecurity}</Link>
         </EmptyState>
       )}
     </section>

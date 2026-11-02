@@ -1,6 +1,6 @@
 # Finanzen – Personal Finance & Portfolio
 
-Lokale Web-App für den Überblick über die eigenen Finanzen: Einnahmen und Ausgaben, Abos und Daueraufträge, Wertpapierdepot mit aktuellen Kursen, Dividenden und Net Worth, alles in Euro. Die Daten liegen in einer SQLite-Datei auf deinem Rechner.
+Lokale Web-App für den Überblick über die eigenen Finanzen: Einnahmen und Ausgaben, Abos und Daueraufträge, Wertpapierdepot mit aktuellen Kursen, Dividenden und Nettovermögen, alles in Euro. Die Daten liegen in einer SQLite-Datei auf deinem Rechner.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-2563eb)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs)
@@ -40,10 +40,11 @@ Lokale Web-App für den Überblick über die eigenen Finanzen: Einnahmen und Aus
 - Erkennt bereits importierte Zeilen und mögliche Dubletten; jeder Import lässt sich rückgängig machen
 
 **Dashboard**
-- Net Worth (Kontostand + Depotwert), Kontostand mit Startguthaben, Fixkosten
+- Nettovermögen (Kontostand + Depotwert), Kontostand mit Startguthaben, Fixkosten
 - Ausgaben nach Kategorie und Depotwert-Entwicklung als Diagramm
 
 **Oberfläche**
+- Deutsch und Englisch, umschaltbar in der Seitenleiste; Zahlen und Datumsangaben im passenden Format
 - Heller und dunkler Modus (folgt auf Wunsch dem Betriebssystem)
 - Große, gut lesbare Schrift; funktioniert auch auf schmalen Bildschirmen
 
@@ -65,13 +66,13 @@ npm run db:seed                # optional: Beispieldaten laden
 npm run dev
 ```
 
-Danach läuft die App unter **http://localhost:3000**.
+Danach läuft die App unter **http://localhost:3000**. Du wirst automatisch auf `/de` oder `/en` weitergeleitet, je nach zuletzt gewählter Sprache bzw. Browser-Sprache.
 
 > **Achtung:** `npm run db:seed` löscht alle vorhandenen Daten und ersetzt sie durch Beispieldaten. Nur für einen ersten Eindruck verwenden.
 
 ### Erste Schritte mit eigenen Daten
 
-1. **Einstellungen → Startguthaben:** aktuellen Kontostand mit Datum eintragen, damit Net Worth stimmt.
+1. **Einstellungen → Startguthaben:** aktuellen Kontostand mit Datum eintragen, damit das Nettovermögen stimmt.
 2. **Portfolio:** Wertpapiere mit Kaufdatum erfassen, z. B. `AAPL`, `SAP.DE` oder `VWCE.DE`. Den Kaufpreis gibst du in der Handelswährung des Tickers an.
 3. **Cashflow:** Buchungen erfassen oder Kontoauszüge per **CSV-Import** einlesen. Wiederkehrende Posten mit dem Haken „Wiederkehrend“ anlegen.
 4. **Dividenden:** Erkannte Ausschüttungen prüfen und buchen.
@@ -110,7 +111,9 @@ prisma/
   migrations/          Datenbank-Migrationen
   seed.ts              Beispieldaten
 src/
-  app/                 Seiten: Dashboard, Cashflow, Abos, Portfolio, Dividenden, Import, Einstellungen
+  app/[lang]/          Seiten (je Sprache): Dashboard, Cashflow, Abos, Portfolio, Dividenden, Import, Einstellungen
+  i18n/                Sprachen: Wörterbücher (de.ts, en.ts), Zugriff für Server und Browser
+  proxy.ts             Weiterleitung von Adressen ohne Sprachpräfix
   actions/             Server Actions (Speichern, Löschen, Import …)
   components/          UI-Komponenten, Formulare, Diagramme
   lib/                 Fachlogik: Kontostand, Portfolio, Dividenden, wiederkehrende Buchungen
@@ -124,9 +127,10 @@ docs/screenshots/      Bilder für diese README
 <details>
 <summary>Details zu Beträgen, Kontostand, Kursen und Import</summary>
 
+- **Sprachen:** Jede Seite gibt es unter `/de/…` und `/en/…`, beide werden vorgerendert. Kategorien werden unter ihrem deutschen Namen gespeichert und nur in der Anzeige übersetzt. Betragseingaben verstehen beide Schreibweisen (`1.234,56` und `1,234.56`). Neue Texte gehören in `src/i18n/dictionaries/de.ts`; die Typprüfung meldet, wenn sie in `en.ts` fehlen.
 - **Beträge** werden als ganze Cent gespeichert, Datumswerte als UTC-Mitternacht. So gibt es weder Rundungsfehler noch Verschiebungen durch Zeitzonen oder Sommerzeit.
 - **Kontostand** = Startguthaben (Kontostand am Ende eines Stichtags) + alle Buchungen *nach* dem Stichtag. Ohne Startguthaben ist es der Saldo aller Buchungen. Buchungen am oder vor dem Stichtag zählen weiterhin in den Monatsauswertungen.
-- **Net Worth** = Kontostand + aktueller Depotwert.
+- **Nettovermögen** = Kontostand + aktueller Depotwert.
 - **Wiederkehrende Buchungen** werden beim Seitenaufruf bis einschließlich heute gebucht. Termine werden immer vom Startdatum aus berechnet: Ein Abo am 31. bucht in kürzeren Monaten am Monatsletzten und springt danach wieder auf den 31. Doppelte Buchungen verhindert ein eindeutiger Schlüssel (Regel + Datum). Beim Fortsetzen einer pausierten Regel werden verpasste Termine nicht nachgebucht.
 - **Kurse** werden bis zu 6 Stunden zwischengespeichert. Ist Yahoo nicht erreichbar, zeigt die App den letzten bekannten Kurs und markiert ihn als veraltet.
 - **Fremdwährungen** werden mit dem aktuellen Wechselkurs in EUR umgerechnet. Kurse in Pence (GBp) werden durch 100 geteilt.

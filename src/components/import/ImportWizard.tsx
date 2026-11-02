@@ -5,7 +5,8 @@ import { FileUp } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { analyzeImport, importTransactions, undoImport, type ImportResult } from "@/actions/import";
 import { categoriesFor } from "@/lib/categories";
-import { formatCents } from "@/lib/money";
+import { useI18n } from "@/i18n/client";
+import { categoryLabel, tf, translateMsg } from "@/i18n/translate";
 import { decodeFile, detectLayout, detectMapping, extractRows, guessBank, parseCsv } from "@/lib/import/csv";
 import type { AnalyzedRow, ColumnMapping, RowStatus } from "@/lib/import/types";
 
@@ -23,17 +24,23 @@ const EMPTY_MAPPING: ColumnMapping = {
   date: null, amount: null, debit: null, credit: null, counterparty: null, counterpartyIncome: null, purpose: null,
 };
 
-const DELIMITER_LABEL: Record<string, string> = { ";": "Semikolon", ",": "Komma", "\t": "Tab" };
-
-const STATUS_LABEL: Record<RowStatus, { label: string; className: string }> = {
-  new: { label: "Neu", className: "bg-pos-soft text-pos" },
-  "possible-duplicate": { label: "Mögliches Duplikat", className: "bg-warn-soft text-warn-ink" },
-  imported: { label: "Bereits importiert", className: "bg-surface-2 text-ink-3" },
+const STATUS_CLASS: Record<RowStatus, string> = {
+  new: "bg-pos-soft text-pos",
+  "possible-duplicate": "bg-warn-soft text-warn-ink",
+  imported: "bg-surface-2 text-ink-3",
 };
 
-const shortDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+const isoToDate = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
 export function ImportWizard() {
+  const { t, fmt, href } = useI18n();
+  const im = t.import;
+  const shortDate = (iso: string) => fmt.date(isoToDate(iso));
+  const statusLabel: Record<RowStatus, string> = {
+    new: im.statusNew,
+    "possible-duplicate": im.statusDuplicate,
+    imported: im.statusImported,
+  };
   const [file, setFile] = useState<FileInfo | null>(null);
   const [headerIndex, setHeaderIndex] = useState(0);
   const [mapping, setMapping] = useState<ColumnMapping>(EMPTY_MAPPING);
@@ -66,13 +73,13 @@ export function ImportWizard() {
   async function handleFile(f: File) {
     reset();
     if (f.size > 10 * 1024 * 1024) {
-      setError("Die Datei ist größer als 10 MB.");
+      setError(im.fileTooLarge);
       return;
     }
     const { text, encoding } = decodeFile(await f.arrayBuffer());
     const { delimiter, rows } = parseCsv(text);
     if (rows.length < 2) {
-      setError("Die Datei enthält keine lesbaren Zeilen. Ist es eine CSV-Datei?");
+      setError(im.noRows);
       return;
     }
     const layout = detectLayout(rows);
@@ -85,7 +92,7 @@ export function ImportWizard() {
     });
     setHeaderIndex(layout?.headerIndex ?? 0);
     setMapping(layout?.mapping ?? detectMapping(rows[0]));
-    if (!layout) setError("Spalten konnten nicht automatisch erkannt werden. Bitte unten zuordnen.");
+    if (!layout) setError(im.notDetected);
   }
 
   function changeHeader(i: number) {
@@ -108,7 +115,7 @@ export function ImportWizard() {
         setChoices(res.map((a) => ({ include: a.status === "new", category: a.suggestedCategory, touched: false })));
         setFilter("all");
       } catch {
-        setError("Prüfung fehlgeschlagen. Sind Datum- und Betragsspalte richtig zugeordnet?");
+        setError(im.analyzeFailed);
       }
     });
   }
@@ -139,7 +146,7 @@ export function ImportWizard() {
     startTransition(async () => {
       const res = await importTransactions({ rows: extracted.rows, selections });
       if (res.ok) setResult(res);
-      else setError(res.message);
+      else setError(translateMsg(t, res.message));
     });
   }
 
@@ -157,27 +164,27 @@ export function ImportWizard() {
       <section className="card max-w-xl">
         {undone === null ? (
           <>
-            <h2 className="text-lg font-semibold">✓ {result.created} Buchungen importiert</h2>
+            <h2 className="text-lg font-semibold">{tf(im.resultImported, { count: result.created })}</h2>
             {result.skipped > 0 && (
-              <p className="mt-1 text-sm text-ink-3">{result.skipped} waren bereits vorhanden und wurden übersprungen.</p>
+              <p className="mt-1 text-sm text-ink-3">{tf(im.resultSkipped, { count: result.skipped })}</p>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
               {result.months.length > 0 && (
-                <Link href={`/transactions?month=${result.months[result.months.length - 1]}`} className="btn-primary">
-                  Zum Cashflow
+                <Link href={href(`/transactions?month=${result.months[result.months.length - 1]}`)} className="btn-primary">
+                  {im.toCashflow}
                 </Link>
               )}
-              <button type="button" className="btn-secondary" onClick={reset}>Weitere Datei importieren</button>
+              <button type="button" className="btn-secondary" onClick={reset}>{im.importAnother}</button>
               <button type="button" className="btn-secondary" onClick={undo} disabled={pending || result.created === 0}>
-                {pending ? "…" : "Import rückgängig machen"}
+                {pending ? "…" : im.undoImport}
               </button>
             </div>
           </>
         ) : (
           <>
-            <h2 className="text-lg font-semibold">Import rückgängig gemacht</h2>
-            <p className="mt-1 text-sm text-ink-3">{undone} Buchungen wurden entfernt.</p>
-            <button type="button" className="btn-secondary mt-4" onClick={reset}>Neue Datei importieren</button>
+            <h2 className="text-lg font-semibold">{im.undoneTitle}</h2>
+            <p className="mt-1 text-sm text-ink-3">{tf(im.undoneText, { count: undone })}</p>
+            <button type="button" className="btn-secondary mt-4" onClick={reset}>{im.importNew}</button>
           </>
         )}
       </section>
@@ -198,10 +205,8 @@ export function ImportWizard() {
           }}
         >
           <span className="mb-1 flex size-[2.6em] items-center justify-center rounded-2xl bg-accent-soft text-accent-ink"><FileUp aria-hidden className="size-[1.3em]" /></span>
-          <span className="font-medium">CSV-Kontoauszug hierher ziehen oder auswählen</span>
-          <span className="text-sm text-ink-3">
-            Automatisch erkannt: Sparkasse, ING, DKB, comdirect, Volksbank, N26. Andere Banken lassen sich manuell zuordnen.
-          </span>
+          <span className="font-medium">{im.dropTitle}</span>
+          <span className="text-sm text-ink-3">{im.dropHint}</span>
           <input
             type="file"
             accept=".csv,text/csv,text/plain"
@@ -214,7 +219,7 @@ export function ImportWizard() {
           />
         </label>
         {error && <p className="text-sm text-neg">{error}</p>}
-        <p className="text-xs text-ink-3">Die Datei wird im Browser gelesen. An den Server gehen nur Datum, Betrag, Gegenpartei und Verwendungszweck.</p>
+        <p className="text-xs text-ink-3">{im.privacy}</p>
       </section>
     );
   }
@@ -222,7 +227,7 @@ export function ImportWizard() {
   // ------------------------------------------------------------------ Zuordnung + Prüfung
   const columnOptions = header.map((h, i) => ({
     value: String(i),
-    label: `${h || `Spalte ${i + 1}`}${file.raw[headerIndex + 1]?.[i] ? ` – z.B. „${file.raw[headerIndex + 1][i].slice(0, 24)}“` : ""}`,
+    label: `${h || tf(im.column, { n: i + 1 })}${file.raw[headerIndex + 1]?.[i] ? ` – ${tf(im.example, { value: file.raw[headerIndex + 1][i].slice(0, 24) })}` : ""}`,
   }));
 
   const counts = analysis
@@ -245,51 +250,51 @@ export function ImportWizard() {
           <div>
             <h2 className="font-semibold">{file.name}</h2>
             <p className="text-sm text-ink-3">
-              {file.bank ? `${file.bank} erkannt · ` : ""}
-              {file.encoding} · {DELIMITER_LABEL[file.delimiter] ?? file.delimiter} · {extracted.rows.length} Buchungen
-              {extracted.skipped > 0 && ` · ${extracted.skipped} Zeilen ohne Datum/Betrag ignoriert`}
+              {file.bank ? `${tf(im.bankDetected, { bank: file.bank })} · ` : ""}
+              {file.encoding} · {(im.delimiters as Record<string, string>)[file.delimiter] ?? file.delimiter} · {tf(im.bookings, { count: extracted.rows.length })}
+              {extracted.skipped > 0 && ` · ${tf(im.skippedRows, { count: extracted.skipped })}`}
             </p>
           </div>
-          <button type="button" className="btn-ghost" onClick={reset}>Andere Datei</button>
+          <button type="button" className="btn-ghost" onClick={reset}>{im.otherFile}</button>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <MappingSelect label="Kopfzeile" value={String(headerIndex)} onChange={(v) => changeHeader(Number(v))}
-            options={file.raw.slice(0, 40).map((r, i) => ({ value: String(i), label: `Zeile ${i + 1}: ${r.slice(0, 3).join(" · ").slice(0, 50)}` }))}
+          <MappingSelect label={im.headerRow} value={String(headerIndex)} onChange={(v) => changeHeader(Number(v))}
+            options={file.raw.slice(0, 40).map((r, i) => ({ value: String(i), label: tf(im.rowLabel, { n: i + 1, preview: r.slice(0, 3).join(" · ").slice(0, 50) }) }))}
             required />
-          <MappingSelect label="Datum" value={mapping.date} onChange={(v) => changeMapping("date", v)} options={columnOptions} required />
+          <MappingSelect label={t.common.date} value={mapping.date} onChange={(v) => changeMapping("date", v)} options={columnOptions} required />
           {mapping.amount !== null || mapping.debit === null ? (
-            <MappingSelect label="Betrag (mit Vorzeichen)" value={mapping.amount} onChange={(v) => changeMapping("amount", v)} options={columnOptions} required={mapping.debit === null} />
+            <MappingSelect label={im.amountSigned} value={mapping.amount} onChange={(v) => changeMapping("amount", v)} options={columnOptions} required={mapping.debit === null} />
           ) : null}
           {mapping.amount === null && (
             <>
-              <MappingSelect label="Soll / Ausgang" value={mapping.debit} onChange={(v) => changeMapping("debit", v)} options={columnOptions} />
-              <MappingSelect label="Haben / Eingang" value={mapping.credit} onChange={(v) => changeMapping("credit", v)} options={columnOptions} />
+              <MappingSelect label={im.debit} value={mapping.debit} onChange={(v) => changeMapping("debit", v)} options={columnOptions} />
+              <MappingSelect label={im.credit} value={mapping.credit} onChange={(v) => changeMapping("credit", v)} options={columnOptions} />
             </>
           )}
-          <MappingSelect label="Gegenpartei" value={mapping.counterparty} onChange={(v) => changeMapping("counterparty", v)} options={columnOptions} />
+          <MappingSelect label={im.party} value={mapping.counterparty} onChange={(v) => changeMapping("counterparty", v)} options={columnOptions} />
           {mapping.counterpartyIncome !== null && (
-            <MappingSelect label="Gegenpartei bei Einnahmen" value={mapping.counterpartyIncome} onChange={(v) => changeMapping("counterpartyIncome", v)} options={columnOptions} />
+            <MappingSelect label={im.partyIncome} value={mapping.counterpartyIncome} onChange={(v) => changeMapping("counterpartyIncome", v)} options={columnOptions} />
           )}
-          <MappingSelect label="Verwendungszweck" value={mapping.purpose} onChange={(v) => changeMapping("purpose", v)} options={columnOptions} />
+          <MappingSelect label={im.purpose} value={mapping.purpose} onChange={(v) => changeMapping("purpose", v)} options={columnOptions} />
         </div>
 
         <label className="mt-3 flex items-center gap-2 text-sm">
           <input type="checkbox" checked={invertSign} onChange={(e) => { setInvertSign(e.target.checked); setAnalysis(null); }} className="size-4" />
-          Vorzeichen umkehren (z.B. Kreditkarten-Abrechnungen, bei denen Ausgaben positiv sind)
+          {im.invertSign}
         </label>
 
         {mappingComplete && extracted.rows.length > 0 && !analysis && (
           <div className="mt-4">
-            <p className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">Vorschau</p>
+            <p className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">{im.preview}</p>
             <table className="w-full text-sm">
               <tbody className="divide-y divide-line-soft">
                 {extracted.rows.slice(0, 5).map((r, i) => (
                   <tr key={i}>
                     <td className="py-1.5 pr-3 whitespace-nowrap text-ink-2 tabular-nums">{shortDate(r.date)}</td>
                     <td className="py-1.5 pr-3">{r.counterparty}<span className="text-ink-4"> {r.purpose}</span></td>
-                    <td className={`py-1.5 text-right whitespace-nowrap tabular-nums ${r.amountCents > 0 ? "text-pos" : ""}`}>
-                      {r.amountCents > 0 ? "+" : "−"}{formatCents(Math.abs(r.amountCents))}
+                    <td className={`py-1.5 text-right whitespace-nowrap tabular-nums ${r.amountCents > 0 ? "text-pos" : "text-neg"}`}>
+                      {r.amountCents > 0 ? "+" : "−"}{fmt.cents(Math.abs(r.amountCents))}
                     </td>
                   </tr>
                 ))}
@@ -302,7 +307,7 @@ export function ImportWizard() {
 
         {!analysis && (
           <button type="button" className="btn-primary mt-4" disabled={!mappingComplete || extracted.rows.length === 0 || pending} onClick={analyze}>
-            {pending ? "Prüfe …" : `${extracted.rows.length} Buchungen prüfen`}
+            {pending ? im.checking : tf(im.checkRows, { count: extracted.rows.length })}
           </button>
         )}
       </section>
@@ -310,44 +315,42 @@ export function ImportWizard() {
       {analysis && counts && (
         <section className="card p-0">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Filter">
+            <div className="flex flex-wrap gap-1" role="group" aria-label={im.filterLabel}>
               {(["all", "new", "possible-duplicate", "imported"] as const).map((f) => (
                 <button key={f} type="button" onClick={() => setFilter(f)} aria-pressed={filter === f}
                   className={`rounded-md px-2.5 py-1 text-xs font-medium ${filter === f ? "bg-ink text-canvas" : "text-ink-2 hover:bg-surface-2"}`}>
-                  {f === "all" ? "Alle" : STATUS_LABEL[f].label} ({counts[f]})
+                  {f === "all" ? im.filterAll : statusLabel[f]} ({counts[f]})
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-ink-2">{selectedCount} ausgewählt</span>
+              <span className="text-sm text-ink-2">{tf(im.selected, { count: selectedCount })}</span>
               <button type="button" className="btn-primary" disabled={selectedCount === 0 || pending} onClick={runImport}>
-                {pending ? "Importiere …" : `${selectedCount} importieren`}
+                {pending ? im.importing : tf(im.importCount, { count: selectedCount })}
               </button>
             </div>
           </div>
           {error && <p className="px-4 pt-3 text-sm text-neg">{error}</p>}
           {counts["possible-duplicate"] > 0 && (
-            <p className="mx-4 mt-3 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn-ink">
-              „Mögliches Duplikat“ heißt: Es gibt schon eine manuelle oder Abo-Buchung mit gleichem Betrag innerhalb von ±3 Tagen. Diese Zeilen sind standardmäßig abgewählt.
-            </p>
+            <p className="mx-4 mt-3 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn-ink">{im.duplicateHint}</p>
           )}
           <div className="max-h-[65vh] overflow-auto p-2">
             <table className="w-full">
               <thead className="sticky top-0 bg-surface">
                 <tr className="border-b border-line">
                   <th className="th-cell w-8">
-                    <input type="checkbox" aria-label="Alle sichtbaren auswählen" checked={allVisibleSelected}
+                    <input type="checkbox" aria-label={im.selectAllVisible} checked={allVisibleSelected}
                       onChange={(e) => {
                         const ids = new Set(selectable.map((a) => a.index));
                         setChoices((cs) => cs.map((c, i) => (ids.has(i) ? { ...c, include: e.target.checked } : c)));
                       }}
                       className="size-4" />
                   </th>
-                  <th className="th-cell">Datum</th>
-                  <th className="th-cell">Gegenpartei / Zweck</th>
-                  <th className="th-cell text-right">Betrag</th>
-                  <th className="th-cell">Kategorie</th>
-                  <th className="th-cell">Status</th>
+                  <th className="th-cell">{t.common.date}</th>
+                  <th className="th-cell">{im.colPartyPurpose}</th>
+                  <th className="th-cell text-right">{t.common.amount}</th>
+                  <th className="th-cell">{t.common.category}</th>
+                  <th className="th-cell">{t.common.status}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">
@@ -358,7 +361,7 @@ export function ImportWizard() {
                   return (
                     <tr key={a.index} className={disabled ? "text-ink-4" : c.include ? "" : "text-ink-3"}>
                       <td className="td-cell">
-                        <input type="checkbox" checked={c.include && !disabled} disabled={disabled} aria-label="Importieren"
+                        <input type="checkbox" checked={c.include && !disabled} disabled={disabled} aria-label={im.includeRow}
                           onChange={(e) => setChoices((cs) => cs.map((x, i) => (i === a.index ? { ...x, include: e.target.checked } : x)))}
                           className="size-4" />
                       </td>
@@ -367,32 +370,40 @@ export function ImportWizard() {
                         <div className="truncate font-medium">{r.counterparty || "–"}</div>
                         <div className="truncate text-xs text-ink-3" title={r.purpose}>{r.purpose}</div>
                       </td>
-                      <td className={`td-cell text-right font-medium whitespace-nowrap tabular-nums ${r.amountCents > 0 ? "text-pos" : ""}`}>
-                        {r.amountCents > 0 ? "+" : "−"}{formatCents(Math.abs(r.amountCents))}
+                      <td className={`td-cell text-right font-medium whitespace-nowrap tabular-nums ${r.amountCents > 0 ? "text-pos" : "text-neg"}`}>
+                        {r.amountCents > 0 ? "+" : "−"}{fmt.cents(Math.abs(r.amountCents))}
                       </td>
                       <td className="td-cell">
                         <select value={c.category} disabled={disabled} onChange={(e) => setCategory(a.index, e.target.value)}
-                          className="field w-auto py-1 text-xs" aria-label="Kategorie">
+                          className="field w-auto py-1 text-xs" aria-label={t.common.category}>
                           {categoriesFor(r.amountCents > 0 ? "INCOME" : "EXPENSE").map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
+                            <option key={cat} value={cat}>{categoryLabel(t, cat)}</option>
                           ))}
                         </select>
                         {!c.touched && !disabled && a.suggestionSource === "history" && (
-                          <div className="mt-0.5 text-[0.625rem] text-accent-ink">gelernt</div>
+                          <div className="mt-0.5 text-[0.625rem] text-accent-ink">{im.learned}</div>
                         )}
                       </td>
                       <td className="td-cell">
-                        <span className={`rounded px-1.5 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap ${STATUS_LABEL[a.status].className}`}>
-                          {STATUS_LABEL[a.status].label}
+                        <span className={`rounded px-1.5 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap ${STATUS_CLASS[a.status]}`}>
+                          {statusLabel[a.status]}
                         </span>
-                        {a.match && <div className="mt-0.5 max-w-48 truncate text-[0.625rem] text-ink-3" title={a.match}>vorhanden: {a.match}</div>}
+                        {a.match && (() => {
+                          const m = a.match;
+                          const label = [shortDate(m.date), categoryLabel(t, m.category), m.note, fmt.cents(m.amountCents)].filter(Boolean).join(" · ");
+                          return (
+                            <div className="mt-0.5 max-w-48 truncate text-[0.625rem] text-ink-3" title={label}>
+                              {tf(im.existing, { match: label })}
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-            {visible.length === 0 && <p className="p-6 text-center text-sm text-ink-3">Keine Zeilen in diesem Filter.</p>}
+            {visible.length === 0 && <p className="p-6 text-center text-sm text-ink-3">{im.emptyFilter}</p>}
           </div>
         </section>
       )}
@@ -409,12 +420,13 @@ function MappingSelect({
   options: { value: string; label: string }[];
   required?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <label className="block">
       <span className="field-label">{label}{required && <span className="text-neg"> *</span>}</span>
       <select className="field" value={value === null ? "" : String(value)} onChange={(e) => onChange(e.target.value)}>
-        {!required && <option value="">– keine –</option>}
-        {required && value === null && <option value="">Bitte wählen</option>}
+        {!required && <option value="">{t.common.none}</option>}
+        {required && value === null && <option value="">{t.common.pleaseChoose}</option>}
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}

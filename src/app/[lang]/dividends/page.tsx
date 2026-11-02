@@ -4,16 +4,18 @@ import { connection } from "next/server";
 import { deleteDividendTransaction, restoreDismissedDividends, unlinkDividend } from "@/actions/dividends";
 import { ActionButton, DeleteButton } from "@/components/DeleteButton";
 import { ProposalRow, type ProposalView } from "@/components/dividends/ProposalRow";
-import { EmptyState, PageHeader, Skeleton, StatCard } from "@/components/ui";
+import { EmptyState, PageHeader, Skeleton, StatCard, toneOf } from "@/components/ui";
+import { getI18n } from "@/i18n/server";
+import { tf } from "@/i18n/translate";
 import { db } from "@/lib/db";
-import { formatDate, todayUTC } from "@/lib/dates";
+import { todayUTC } from "@/lib/dates";
 import { getDividendProposals } from "@/lib/dividends";
-import { formatCents, formatPercent } from "@/lib/money";
 
-export default function DividendsPage() {
+export default async function DividendsPage() {
+  const { t } = await getI18n();
   return (
     <>
-      <PageHeader title="Dividenden" />
+      <PageHeader title={t.dividends.title} />
       <div className="grid gap-8">
         <Suspense fallback={<Skeleton className="h-24" />}>
           <Totals />
@@ -31,6 +33,8 @@ export default function DividendsPage() {
 
 async function Totals() {
   await connection();
+  const { t, fmt } = await getI18n();
+  const d = t.dividends;
   const year = todayUTC().getUTCFullYear();
   const rows = await db.transaction.findMany({
     where: { type: "INCOME", assetSymbol: { not: null } },
@@ -42,17 +46,23 @@ async function Totals() {
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <StatCard label={`Erhalten ${year}`} value={formatCents(sumYear(year))} hint="netto, gebucht oder verknüpft" />
-      <StatCard label={`Erhalten ${year - 1}`} value={formatCents(sumYear(year - 1))} />
-      <StatCard label="Erhalten gesamt" value={formatCents(total)} hint={`${rows.length} ${rows.length === 1 ? "Zahlung" : "Zahlungen"}`} />
+      <StatCard label={tf(d.receivedYear, { year })} value={fmt.cents(sumYear(year))} tone={toneOf(sumYear(year))} hint={d.receivedYearHint} />
+      <StatCard label={tf(d.receivedYear, { year: year - 1 })} value={fmt.cents(sumYear(year - 1))} tone={toneOf(sumYear(year - 1))} />
+      <StatCard
+        label={d.receivedTotal}
+        value={fmt.cents(total)}
+        tone={toneOf(total)}
+        hint={rows.length === 1 ? d.paymentsOne : tf(d.paymentsMany, { count: rows.length })}
+      />
     </div>
   );
 }
 
 async function Proposals() {
   await connection();
+  const { t, fmt, href } = await getI18n();
+  const d = t.dividends;
   const { proposals, dismissedCount, taxRate } = await getDividendProposals();
-  const taxRateLabel = formatPercent(taxRate).replace("+", "");
 
   const views: ProposalView[] = proposals.map((p) => ({
     key: p.key,
@@ -60,14 +70,13 @@ async function Proposals() {
     name: p.name,
     currency: p.currency,
     exDate: p.exDate,
-    exDateLabel: formatDate(new Date(p.exDate)),
     amountPerShare: p.amountPerShare,
     shares: p.shares,
     grossEUR: p.grossEUR,
     netEstimateEUR: p.netEstimateEUR,
     candidate: p.candidate && {
       id: p.candidate.id,
-      dateLabel: formatDate(p.candidate.date),
+      date: p.candidate.date.toISOString().slice(0, 10),
       amountCents: p.candidate.amountCents,
       label: p.candidate.label,
     },
@@ -76,26 +85,27 @@ async function Proposals() {
   return (
     <section>
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-semibold">Neue Dividenden {views.length > 0 && <span className="text-ink-3">({views.length})</span>}</h2>
+        <h2 className="font-semibold">
+          {d.newTitle} {views.length > 0 && <span className="text-ink-3">({views.length})</span>}
+        </h2>
         {dismissedCount > 0 && (
           <span className="text-xs text-ink-3">
-            {dismissedCount} ignoriert · <ActionButton action={restoreDismissedDividends}>wieder anzeigen</ActionButton>
+            {tf(d.dismissed, { count: dismissedCount })} · <ActionButton action={restoreDismissedDividends}>{d.showAgain}</ActionButton>
           </span>
         )}
       </div>
       {views.length === 0 ? (
-        <EmptyState>
-          Keine offenen Dividenden. Erkannt werden Ausschüttungen deiner Wertpapiere ab dem Kaufdatum, Daten von Yahoo Finance.
-        </EmptyState>
+        <EmptyState>{d.empty}</EmptyState>
       ) : (
         <>
           <div className="card divide-y divide-line-soft p-0">
             {views.map((p) => (
-              <ProposalRow key={p.key} p={p} taxRateLabel={taxRateLabel} />
+              <ProposalRow key={p.key} p={p} taxRate={taxRate} />
             ))}
           </div>
           <p className="mt-2 text-xs text-ink-3">
-            Vorgeschlagen ist das geschätzte Netto mit {taxRateLabel} Steuer (<Link href="/settings" className="underline">ändern</Link>). Trag den Betrag ein, der wirklich auf dem Konto ankam, und als Datum den Tag der Gutschrift (oft einige Tage bis Wochen nach dem Ex-Tag). Hast du die Gutschrift schon per CSV importiert, nutze „Verknüpfen“, sonst wird sie doppelt gezählt.
+            {tf(d.footnoteBefore, { rate: fmt.rate(taxRate) })} (
+            <Link href={href("/settings")} className="underline">{d.footnoteChange}</Link>). {d.footnoteAfter}
           </p>
         </>
       )}
@@ -105,6 +115,8 @@ async function Proposals() {
 
 async function Received() {
   await connection();
+  const { t, fmt } = await getI18n();
+  const d = t.dividends;
   const rows = await db.transaction.findMany({
     where: { type: "INCOME", assetSymbol: { not: null } },
     orderBy: { date: "desc" },
@@ -118,31 +130,33 @@ async function Received() {
   return (
     <section className="grid gap-4 lg:grid-cols-[1fr_16rem]">
       <div>
-        <h2 className="mb-2 font-semibold">Erhaltene Dividenden</h2>
+        <h2 className="mb-2 font-semibold">{d.receivedTitle}</h2>
         <div className="card overflow-x-auto p-2">
           <table className="w-full">
             <thead className="border-b border-line">
               <tr>
-                <th className="th-cell">Datum</th>
-                <th className="th-cell">Wertpapier</th>
-                <th className="th-cell">Herkunft</th>
-                <th className="th-cell text-right">Netto</th>
+                <th className="th-cell">{t.common.date}</th>
+                <th className="th-cell">{d.colSecurity}</th>
+                <th className="th-cell">{d.colOrigin}</th>
+                <th className="th-cell text-right">{d.colNet}</th>
                 <th className="th-cell" />
               </tr>
             </thead>
             <tbody className="divide-y divide-line-soft">
               {rows.map((r) => (
                 <tr key={r.id}>
-                  <td className="td-cell whitespace-nowrap tabular-nums">{formatDate(r.date)}</td>
+                  <td className="td-cell whitespace-nowrap tabular-nums">{fmt.date(r.date)}</td>
                   <td className="td-cell">
                     <div className="font-medium">{r.assetSymbol}</div>
                     <div className="max-w-xs truncate text-xs text-ink-3">{r.counterparty}</div>
                   </td>
-                  <td className="td-cell text-xs text-ink-3">{r.importKey ? "CSV-Import, verknüpft" : r.dividendKey ? "gebucht" : "manuell"}</td>
-                  <td className="td-cell text-right font-medium text-pos tabular-nums">+{formatCents(r.amountCents)}</td>
+                  <td className="td-cell text-xs text-ink-3">
+                    {r.importKey ? d.originCsv : r.dividendKey ? d.originBooked : d.originManual}
+                  </td>
+                  <td className="td-cell text-right font-medium text-pos tabular-nums">+{fmt.cents(r.amountCents)}</td>
                   <td className="td-cell text-right whitespace-nowrap">
                     {r.importKey ? (
-                      <ActionButton action={unlinkDividend.bind(null, r.id)}>Verknüpfung lösen</ActionButton>
+                      <ActionButton action={unlinkDividend.bind(null, r.id)}>{d.unlink}</ActionButton>
                     ) : (
                       <DeleteButton action={deleteDividendTransaction.bind(null, r.id)} />
                     )}
@@ -154,14 +168,14 @@ async function Received() {
         </div>
       </div>
       <div>
-        <h2 className="mb-2 font-semibold">Je Wertpapier</h2>
+        <h2 className="mb-2 font-semibold">{d.bySecurity}</h2>
         <div className="card divide-y divide-line-soft p-0 text-sm">
           {[...bySymbol.entries()]
             .sort((a, b) => b[1] - a[1])
             .map(([symbol, cents]) => (
               <div key={symbol} className="flex justify-between px-4 py-2">
                 <span className="font-medium">{symbol}</span>
-                <span className="tabular-nums">{formatCents(cents)}</span>
+                <span className="text-pos tabular-nums">+{fmt.cents(cents)}</span>
               </div>
             ))}
         </div>

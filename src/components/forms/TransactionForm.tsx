@@ -1,12 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import {
-  categoriesFor,
-  INTERVAL_LABELS,
-  RECURRING_INTERVALS,
-  type TransactionType,
-} from "@/lib/categories";
+import { categoriesFor, RECURRING_INTERVALS, type TransactionType } from "@/lib/categories";
+import { useI18n } from "@/i18n/client";
+import { categoryLabel } from "@/i18n/translate";
 import type { FormState } from "@/lib/validation";
 import { FieldError, FormMessage } from "./FormFeedback";
 
@@ -32,9 +29,10 @@ export function TransactionForm({
   action,
   defaults,
   allowRecurring = false,
-  submitLabel = "Speichern",
+  submitLabel,
   resetOnSuccess = false,
 }: Props) {
+  const { t } = useI18n();
   const [state, formAction, pending] = useActionState(action, {});
   const [type, setType] = useState<TransactionType>(defaults.type);
   // Checkbox-Zustand gilt nur für den aktuellen Action-State; danach zählt der
@@ -56,14 +54,14 @@ export function TransactionForm({
   return (
     <form ref={formRef} action={formAction} className="grid gap-4">
       <fieldset>
-        <legend className="field-label">Typ</legend>
+        <legend className="field-label">{t.common.type}</legend>
         <div className="grid grid-cols-2 gap-2">
-          {(["EXPENSE", "INCOME"] as const).map((t) => (
+          {(["EXPENSE", "INCOME"] as const).map((kind) => (
             <label
-              key={t}
+              key={kind}
               className={`cursor-pointer rounded-lg border px-3 py-2 text-center text-sm font-medium ${
-                type === t
-                  ? t === "INCOME"
+                type === kind
+                  ? kind === "INCOME"
                     ? "border-pos bg-pos-soft text-pos"
                     : "border-neg bg-neg-soft text-neg"
                   : "border-line-strong text-ink-2 hover:bg-surface-2"
@@ -72,12 +70,12 @@ export function TransactionForm({
               <input
                 type="radio"
                 name="type"
-                value={t}
-                checked={type === t}
-                onChange={() => setType(t)}
+                value={kind}
+                checked={type === kind}
+                onChange={() => setType(kind)}
                 className="sr-only"
               />
-              {t === "INCOME" ? "Einnahme" : "Ausgabe"}
+              {kind === "INCOME" ? t.common.income : t.common.expense}
             </label>
           ))}
         </div>
@@ -86,13 +84,13 @@ export function TransactionForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label htmlFor="amount" className="field-label">
-            Betrag (€)
+            {t.common.amountEur}
           </label>
           <input
             id="amount"
             name="amount"
             inputMode="decimal"
-            placeholder="0,00"
+            placeholder={t.common.amountPlaceholder}
             defaultValue={v.amount}
             className="field tabular-nums"
             required
@@ -101,7 +99,7 @@ export function TransactionForm({
         </div>
         <div>
           <label htmlFor="date" className="field-label">
-            {recurring ? "Erste Buchung am" : "Datum"}
+            {recurring ? t.transactionForm.firstBookingOn : t.common.date}
           </label>
           <input id="date" name="date" type="date" defaultValue={v.date} className="field" required />
           <FieldError state={state} name="date" />
@@ -110,7 +108,7 @@ export function TransactionForm({
 
       <div>
         <label htmlFor="category" className="field-label">
-          Kategorie
+          {t.common.category}
         </label>
         <select
           id="category"
@@ -121,7 +119,7 @@ export function TransactionForm({
         >
           {categories.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {categoryLabel(t, c)}
             </option>
           ))}
         </select>
@@ -130,7 +128,7 @@ export function TransactionForm({
 
       <div>
         <label htmlFor="note" className="field-label">
-          Notiz <span className="font-normal text-ink-4">(optional)</span>
+          {t.common.note} <span className="font-normal text-ink-4">{t.common.optional}</span>
         </label>
         <input id="note" name="note" defaultValue={v.note} className="field" maxLength={500} />
         <FieldError state={state} name="note" />
@@ -146,15 +144,15 @@ export function TransactionForm({
               onChange={(e) => setOverride({ state, on: e.target.checked })}
               className="size-4"
             />
-            Wiederkehrend (Abo, Miete, Gehalt …)
+            {t.transactionForm.recurring}
           </label>
           {recurring && (
             <div className="mt-2 flex items-center gap-2 text-sm">
-              <span className="text-ink-2">Intervall:</span>
+              <span className="text-ink-2">{t.transactionForm.intervalLabel}</span>
               <select name="interval" defaultValue={state.values?.interval ?? "MONTHLY"} className="field w-auto py-1">
                 {RECURRING_INTERVALS.map((i) => (
                   <option key={i} value={i}>
-                    {INTERVAL_LABELS[i]}
+                    {t.intervals[i]}
                   </option>
                 ))}
               </select>
@@ -162,7 +160,7 @@ export function TransactionForm({
           )}
           {recurring && (
             <p className="mt-2 text-xs text-ink-3">
-              Fällige Buchungen werden automatisch angelegt, auch rückwirkend ab dem Startdatum.
+              {t.transactionForm.recurringHint}
             </p>
           )}
         </div>
@@ -170,7 +168,7 @@ export function TransactionForm({
 
       <div className="flex items-center gap-3">
         <button type="submit" className="btn-primary" disabled={pending}>
-          {pending ? "Speichern …" : submitLabel}
+          {pending ? t.common.saving : (submitLabel ?? t.common.save)}
         </button>
         <FormMessage state={state} />
       </div>

@@ -4,19 +4,20 @@ import { connection } from "next/server";
 import { deleteRecurringRule, toggleRecurringRule } from "@/actions/recurring";
 import { ActionButton, DeleteButton } from "@/components/DeleteButton";
 import { EmptyState, PageHeader, Skeleton, StatCard } from "@/components/ui";
+import { getI18n } from "@/i18n/server";
+import { categoryLabel, tf } from "@/i18n/translate";
 import { getMonthlyFixedCostsCents } from "@/lib/cashflow";
-import { INTERVAL_LABELS, type RecurringInterval } from "@/lib/categories";
+import type { RecurringInterval } from "@/lib/categories";
 import { db } from "@/lib/db";
-import { formatDate } from "@/lib/dates";
-import { formatCents } from "@/lib/money";
 import { materializeRecurring } from "@/lib/recurring";
 
-export default function RecurringPage() {
+export default async function RecurringPage() {
+  const { t, href } = await getI18n();
   return (
     <>
-      <PageHeader title="Abos & Daueraufträge">
-        <Link href="/transactions" className="btn-secondary">
-          + Neu (über Cashflow)
+      <PageHeader title={t.recurring.title}>
+        <Link href={href("/transactions")} className="btn-secondary">
+          {t.recurring.newViaCashflow}
         </Link>
       </PageHeader>
       <Suspense fallback={<Skeleton className="h-64" />}>
@@ -28,6 +29,8 @@ export default function RecurringPage() {
 
 async function RecurringList() {
   await connection();
+  const { t, fmt, href } = await getI18n();
+  const r_ = t.recurring;
   await materializeRecurring();
   const [rules, fixedCosts] = await Promise.all([
     db.recurringRule.findMany({
@@ -38,50 +41,46 @@ async function RecurringList() {
   ]);
 
   if (rules.length === 0) {
-    return (
-      <EmptyState>
-        Noch keine wiederkehrenden Buchungen. Lege eine Buchung im Cashflow an und setze den Haken bei „Wiederkehrend“.
-      </EmptyState>
-    );
+    return <EmptyState>{r_.empty}</EmptyState>;
   }
 
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Fixkosten pro Monat" value={formatCents(fixedCosts)} hint="andere Intervalle anteilig umgerechnet" />
-        <StatCard label="Fixkosten pro Jahr" value={formatCents(fixedCosts * 12)} />
-        <StatCard label="Aktive Regeln" value={String(rules.filter((r) => r.active).length)} />
+        <StatCard label={r_.fixedPerMonth} value={fmt.cents(fixedCosts)} hint={r_.fixedPerMonthHint} />
+        <StatCard label={r_.fixedPerYear} value={fmt.cents(fixedCosts * 12)} />
+        <StatCard label={r_.activeRules} value={String(rules.filter((r) => r.active).length)} />
       </div>
       <div className="card overflow-x-auto p-2">
         <table className="w-full">
           <thead className="border-b border-line">
             <tr>
-              <th className="th-cell">Kategorie</th>
-              <th className="th-cell">Notiz</th>
-              <th className="th-cell">Intervall</th>
-              <th className="th-cell">Nächste Buchung</th>
-              <th className="th-cell text-right">Betrag</th>
+              <th className="th-cell">{t.common.category}</th>
+              <th className="th-cell">{t.common.note}</th>
+              <th className="th-cell">{t.common.interval}</th>
+              <th className="th-cell">{r_.colNextBooking}</th>
+              <th className="th-cell text-right">{t.common.amount}</th>
               <th className="th-cell" />
             </tr>
           </thead>
           <tbody className="divide-y divide-line-soft">
             {rules.map((r) => (
               <tr key={r.id} className={r.active ? "" : "text-ink-4"}>
-                <td className="td-cell">{r.category}</td>
+                <td className="td-cell">{categoryLabel(t, r.category)}</td>
                 <td className="td-cell text-ink-3">{r.note}</td>
-                <td className="td-cell">{INTERVAL_LABELS[r.interval as RecurringInterval]}</td>
+                <td className="td-cell">{t.intervals[r.interval as RecurringInterval] ?? r.interval}</td>
                 <td className="td-cell tabular-nums">
-                  {r.active ? formatDate(r.nextDue) : <span className="text-xs font-medium">pausiert</span>}
-                  <div className="text-xs text-ink-4">{r._count.transactions} gebucht seit {formatDate(r.startDate)}</div>
+                  {r.active ? fmt.date(r.nextDue) : <span className="text-xs font-medium">{r_.paused}</span>}
+                  <div className="text-xs text-ink-4">{tf(r_.bookedSince, { count: r._count.transactions, date: fmt.date(r.startDate) })}</div>
                 </td>
-                <td className={`td-cell text-right font-medium tabular-nums ${r.type === "INCOME" ? "text-pos" : ""}`}>
+                <td className={`td-cell text-right font-medium tabular-nums ${r.type === "INCOME" ? "text-pos" : "text-neg"}`}>
                   {r.type === "INCOME" ? "+" : "−"}
-                  {formatCents(r.amountCents)}
+                  {fmt.cents(r.amountCents)}
                 </td>
                 <td className="td-cell text-right whitespace-nowrap">
-                  <Link href={`/recurring/${r.id}/edit`} className="btn-ghost">Bearbeiten</Link>
+                  <Link href={href(`/recurring/${r.id}/edit`)} className="btn-ghost">{t.common.edit}</Link>
                   <ActionButton action={toggleRecurringRule.bind(null, r.id)}>
-                    {r.active ? "Pausieren" : "Fortsetzen"}
+                    {r.active ? r_.pause : r_.resume}
                   </ActionButton>
                   <DeleteButton action={deleteRecurringRule.bind(null, r.id)} />
                 </td>
@@ -90,9 +89,7 @@ async function RecurringList() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-ink-3">
-        Beim Löschen einer Regel bleiben bereits gebuchte Transaktionen erhalten. Beim Fortsetzen werden verpasste Termine nicht nachgebucht.
-      </p>
+      <p className="text-xs text-ink-3">{r_.footnote}</p>
     </div>
   );
 }

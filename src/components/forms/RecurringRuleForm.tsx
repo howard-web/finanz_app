@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { categoriesFor, INTERVAL_LABELS, RECURRING_INTERVALS, type TransactionType } from "@/lib/categories";
+import { categoriesFor, RECURRING_INTERVALS, type TransactionType } from "@/lib/categories";
+import { useI18n } from "@/i18n/client";
+import { categoryLabel } from "@/i18n/translate";
 import type { FormState } from "@/lib/validation";
 import { FieldError, FormMessage } from "./FormFeedback";
 
@@ -11,6 +13,7 @@ type Props = {
 };
 
 export function RecurringRuleForm({ action, defaults }: Props) {
+  const { t } = useI18n();
   const [state, formAction, pending] = useActionState(action, {});
   const [type, setType] = useState<TransactionType>(defaults.type);
   const categories = categoriesFor(type);
@@ -20,28 +23,28 @@ export function RecurringRuleForm({ action, defaults }: Props) {
     <form action={formAction} className="grid gap-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="type" className="field-label">Typ</label>
+          <label htmlFor="type" className="field-label">{t.common.type}</label>
           <select id="type" name="type" value={type} onChange={(e) => setType(e.target.value as TransactionType)} className="field">
-            <option value="EXPENSE">Ausgabe</option>
-            <option value="INCOME">Einnahme</option>
+            <option value="EXPENSE">{t.common.expense}</option>
+            <option value="INCOME">{t.common.income}</option>
           </select>
         </div>
         <div>
-          <label htmlFor="interval" className="field-label">Intervall</label>
+          <label htmlFor="interval" className="field-label">{t.common.interval}</label>
           <select id="interval" name="interval" defaultValue={v.interval} className="field">
             {RECURRING_INTERVALS.map((i) => (
-              <option key={i} value={i}>{INTERVAL_LABELS[i]}</option>
+              <option key={i} value={i}>{t.intervals[i]}</option>
             ))}
           </select>
         </div>
       </div>
       <div>
-        <label htmlFor="amount" className="field-label">Betrag (€)</label>
+        <label htmlFor="amount" className="field-label">{t.common.amountEur}</label>
         <input id="amount" name="amount" inputMode="decimal" defaultValue={v.amount} className="field tabular-nums" required />
         <FieldError state={state} name="amount" />
       </div>
       <div>
-        <label htmlFor="category" className="field-label">Kategorie</label>
+        <label htmlFor="category" className="field-label">{t.common.category}</label>
         <select
           id="category"
           name="category"
@@ -50,19 +53,19 @@ export function RecurringRuleForm({ action, defaults }: Props) {
           className="field"
         >
           {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c} value={c}>{categoryLabel(t, c)}</option>
           ))}
         </select>
         <FieldError state={state} name="category" />
       </div>
       <div>
-        <label htmlFor="note" className="field-label">Notiz</label>
+        <label htmlFor="note" className="field-label">{t.common.note}</label>
         <input id="note" name="note" defaultValue={v.note} className="field" maxLength={500} />
       </div>
-      <p className="text-xs text-ink-3">Änderungen gelten für künftige Buchungen. Bereits gebuchte bleiben unverändert.</p>
+      <p className="text-xs text-ink-3">{t.recurring.editHint}</p>
       <div className="flex items-center gap-3">
         <button type="submit" className="btn-primary" disabled={pending}>
-          {pending ? "Speichern …" : "Speichern"}
+          {pending ? t.common.saving : t.common.save}
         </button>
         <FormMessage state={state} />
       </div>

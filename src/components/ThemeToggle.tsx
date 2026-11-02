@@ -2,6 +2,7 @@
 
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useSyncExternalStore } from "react";
+import { useI18n } from "@/i18n/client";
 
 type Theme = "system" | "light" | "dark";
 const KEY = "theme";
@@ -42,13 +43,14 @@ function setTheme(theme: Theme) {
   window.dispatchEvent(new Event(EVENT));
 }
 
-const OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
-  { value: "system", label: "System", icon: Monitor },
-  { value: "light", label: "Hell", icon: Sun },
-  { value: "dark", label: "Dunkel", icon: Moon },
+const OPTIONS: { value: Theme; icon: typeof Sun }[] = [
+  { value: "system", icon: Monitor },
+  { value: "light", icon: Sun },
+  { value: "dark", icon: Moon },
 ];
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
+  const { t } = useI18n();
   const theme = useSyncExternalStore(subscribe, readTheme, () => "system" as Theme);
 
   // Bei "System" auf Wechsel des Betriebssystem-Modus reagieren
@@ -62,8 +64,9 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   }, [theme]);
 
   return (
-    <div role="radiogroup" aria-label="Farbschema" className={`inline-flex rounded-xl border border-line bg-surface-2 p-0.5 ${className}`}>
-      {OPTIONS.map(({ value, label, icon: Icon }) => {
+    <div role="radiogroup" aria-label={t.theme.label} className={`inline-flex rounded-xl border border-line bg-surface-2 p-0.5 ${className}`}>
+      {OPTIONS.map(({ value, icon: Icon }) => {
+        const label = t.theme[value];
         const active = theme === value;
         return (
           <button

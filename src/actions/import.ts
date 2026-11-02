@@ -1,12 +1,12 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { categoriesFor, type TransactionType } from "@/lib/categories";
-import { formatCents } from "@/lib/money";
-import { formatDate, parseDateInput } from "@/lib/dates";
+import { parseDateInput } from "@/lib/dates";
+import { revalidateApp } from "@/lib/revalidate";
+import type { Msg } from "@/i18n/translate";
 import { buildImportKeys } from "@/lib/import/keys";
 import { materializeRecurring } from "@/lib/recurring";
 import { suggestCategoryByRule } from "@/lib/import/rules";
@@ -106,7 +106,7 @@ export async function analyzeImport(input: ParsedRow[]): Promise<AnalyzedRow[]> 
       return {
         index,
         status: "possible-duplicate",
-        match: `${formatDate(match.date)} · ${match.category}${match.note ? ` · ${match.note}` : ""} · ${formatCents(match.amountCents)}`,
+        match: { date: match.date.toISOString().slice(0, 10), category: match.category, note: match.note, amountCents: match.amountCents },
         suggestedCategory,
         suggestionSource,
       };
@@ -119,12 +119,12 @@ const importSchema = z.object({
   rows: rowsSchema,
   selections: z
     .array(z.object({ index: z.number().int().min(0), category: z.string().min(1) }))
-    .min(1, "Keine Zeilen ausgewählt."),
+    .min(1, "noRowsSelected"),
 });
 
 export type ImportResult =
   | { ok: true; created: number; skipped: number; batch: string; months: string[] }
-  | { ok: false; message: string };
+  | { ok: false; message: Msg };
 
 /**
  * Importiert die ausgewählten Zeilen. `rows` ist immer die komplette Datei, damit
@@ -136,7 +136,7 @@ export async function importTransactions(input: {
 }): Promise<ImportResult> {
   const parsed = importSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, message: parsed.error.issues[0]?.message ?? "Ungültige Daten." };
+    return { ok: false, message: { key: parsed.error.issues[0]?.message ?? "invalid" } };
   }
   const { rows, selections } = parsed.data;
   const keys = buildImportKeys(rows);
@@ -145,10 +145,10 @@ export async function importTransactions(input: {
   const data = [];
   for (const { index, category } of selections) {
     const r = rows[index];
-    if (!r) return { ok: false, message: `Zeile ${index + 1} existiert nicht.` };
+    if (!r) return { ok: false, message: { key: "rowMissing", params: { row: index + 1 } } };
     const type = typeOf(r);
     if (!categoriesFor(type).includes(category)) {
-      return { ok: false, message: `Kategorie „${category}“ passt nicht zu Zeile ${index + 1}.` };
+      return { ok: false, message: { key: "rowCategoryMismatch", params: { category, row: index + 1 } } };
     }
     data.push({
       amountCents: Math.abs(r.amountCents),
@@ -174,7 +174,7 @@ export async function importTransactions(input: {
   const fresh = data.filter((d) => !existing.has(d.importKey));
   if (fresh.length > 0) await db.transaction.createMany({ data: fresh });
 
-  revalidatePath("/", "layout");
+  revalidateApp();
   return {
     ok: true,
     created: fresh.length,
@@ -188,6 +188,6 @@ export async function importTransactions(input: {
 export async function undoImport(batch: string): Promise<{ deleted: number }> {
   const id = z.uuid().parse(batch);
   const { count } = await db.transaction.deleteMany({ where: { importBatch: id } });
-  revalidatePath("/", "layout");
+  revalidateApp();
   return { deleted: count };
 }

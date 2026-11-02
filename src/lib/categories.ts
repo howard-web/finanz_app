@@ -27,13 +27,6 @@ export const INCOME_CATEGORIES = [
 export const RECURRING_INTERVALS = ["WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"] as const;
 export type RecurringInterval = (typeof RECURRING_INTERVALS)[number];
 
-export const INTERVAL_LABELS: Record<RecurringInterval, string> = {
-  WEEKLY: "wöchentlich",
-  MONTHLY: "monatlich",
-  QUARTERLY: "vierteljährlich",
-  YEARLY: "jährlich",
-};
-
 /** Anzahl Termine pro Jahr, z.B. für die Umrechnung auf monatliche Fixkosten. */
 export const INTERVALS_PER_YEAR: Record<RecurringInterval, number> = {
   WEEKLY: 52,
@@ -45,3 +38,18 @@ export const INTERVALS_PER_YEAR: Record<RecurringInterval, number> = {
 export function categoriesFor(type: TransactionType): readonly string[] {
   return type === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 }
+
+/**
+ * Feste Farbzuordnung für das Ausgaben-Diagramm. Die Reihenfolge ist zugleich
+ * die Reihenfolge der Tortenstücke (im Uhrzeigersinn), damit immer dieselben
+ * Farben nebeneinander liegen. Nicht aufgeführte Kategorien landen in "Weitere".
+ */
+export const EXPENSE_CHART_SLOTS: { category: string; color: string }[] = [
+  { category: "Miete", color: "var(--cat-1)" },
+  { category: "Lebensmittel", color: "var(--cat-2)" },
+  { category: "Nebenkosten", color: "var(--cat-3)" },
+  { category: "Mobilität", color: "var(--cat-4)" },
+  { category: "Abo", color: "var(--cat-5)" },
+  { category: "Essen gehen", color: "var(--cat-6)" },
+];
+export const EXPENSE_CHART_OTHER_COLOR = "var(--cat-other)";

@@ -1,12 +1,16 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { parseDateInput, todayUTC } from "@/lib/dates";
 import { getDividendProposals } from "@/lib/dividends";
-import { formatEUR, parseAmountToCents } from "@/lib/money";
-import { formToObject, type FormState } from "@/lib/validation";
+import { parseAmountToCents, parseDecimal } from "@/lib/money";
+import { revalidateApp } from "@/lib/revalidate";
+import { DEFAULT_LOCALE, hasLocale } from "@/i18n/config";
+import { dictionaries } from "@/i18n/dictionaries";
+import { tf } from "@/i18n/translate";
+import { getFormatters } from "@/lib/format";
+import { formToObject, msg, type FormState } from "@/lib/validation";
 
 const keySchema = z.string().regex(/^[A-Z0-9.\-=^]+\|\d{4}-\d{2}-\d{2}$/);
 
@@ -15,21 +19,32 @@ async function findProposal(key: string) {
   return proposals.find((p) => p.key === key) ?? null;
 }
 
-/** Bucht einen Vorschlag als Einnahme (Betrag = tatsächlich erhaltenes Netto). */
-export async function bookDividend(key: string, _prev: FormState, formData: FormData): Promise<FormState> {
+/**
+ * Bucht einen Vorschlag als Einnahme (Betrag = tatsächlich erhaltenes Netto).
+ * `lang` bestimmt nur die Sprache der gespeicherten Notiz.
+ */
+export async function bookDividend(lang: string, key: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const values = formToObject(formData);
   const proposal = await findProposal(keySchema.parse(key));
-  if (!proposal) return { ok: false, message: "Vorschlag nicht mehr vorhanden (schon gebucht?)." };
+  if (!proposal) return { ok: false, message: msg("dividendGone") };
 
   const cents = parseAmountToCents(values.amount ?? "");
   const date = parseDateInput(values.date ?? "");
-  const errors: Record<string, string[]> = {};
-  if (cents === null || cents <= 0) errors.amount = ["Bitte den erhaltenen Betrag eingeben."];
-  if (!date) errors.date = ["Bitte ein Datum wählen."];
-  else if (date > todayUTC()) errors.date = ["Datum liegt in der Zukunft."];
+  const errors: NonNullable<FormState["errors"]> = {};
+  if (cents === null || cents <= 0) errors.amount = [msg("dividendAmount")];
+  if (!date) errors.date = [msg("dateInvalid")];
+  else if (date > todayUTC()) errors.date = [msg("dateInFuture")];
   if (Object.keys(errors).length) return { ok: false, errors, values };
 
-  const perShare = proposal.amountPerShare.toLocaleString("de-DE", { maximumFractionDigits: 4 });
+  const l = hasLocale(lang) ? lang : DEFAULT_LOCALE;
+  const fmt = getFormatters(l);
+  const note = tf(dictionaries[l].dividends.bookedNote, {
+    symbol: proposal.symbol,
+    shares: fmt.number(proposal.shares),
+    perShare: fmt.number(proposal.amountPerShare),
+    currency: proposal.currency,
+    gross: fmt.eur(proposal.grossEUR),
+  });
   await db.transaction.create({
     data: {
       amountCents: cents!,
@@ -37,12 +52,12 @@ export async function bookDividend(key: string, _prev: FormState, formData: Form
       category: "Dividende",
       date: date!,
       counterparty: proposal.name ?? proposal.symbol,
-      note: `Dividende ${proposal.symbol}: ${proposal.shares.toLocaleString("de-DE")} × ${perShare} ${proposal.currency} (brutto ${formatEUR(proposal.grossEUR)})`,
+      note,
       assetSymbol: proposal.symbol,
       dividendKey: proposal.key,
     },
   });
-  revalidatePath("/", "layout");
+  revalidateApp();
   return { ok: true };
 }
 
@@ -57,18 +72,18 @@ export async function linkDividend(key: string, transactionId: string): Promise<
     where: { id: transactionId },
     data: { dividendKey: proposal.key, assetSymbol: proposal.symbol, category: "Dividende" },
   });
-  revalidatePath("/", "layout");
+  revalidateApp();
 }
 
 export async function dismissDividend(key: string): Promise<void> {
   const k = keySchema.parse(key);
   await db.dividendDismissal.upsert({ where: { key: k }, create: { key: k }, update: {} });
-  revalidatePath("/", "layout");
+  revalidateApp();
 }
 
 export async function restoreDismissedDividends(): Promise<void> {
   await db.dividendDismissal.deleteMany();
-  revalidatePath("/", "layout");
+  revalidateApp();
 }
 
 /** Löst die Verknüpfung; die Buchung bleibt erhalten, der Vorschlag erscheint wieder. */
@@ -77,22 +92,23 @@ export async function unlinkDividend(transactionId: string): Promise<void> {
     where: { id: transactionId },
     data: { dividendKey: null, assetSymbol: null },
   });
-  revalidatePath("/", "layout");
+  revalidateApp();
 }
 
 export async function deleteDividendTransaction(transactionId: string): Promise<void> {
   await db.transaction.delete({ where: { id: transactionId } });
-  revalidatePath("/", "layout");
+  revalidateApp();
 }
 
 export async function saveDividendTaxRate(_prev: FormState, formData: FormData): Promise<FormState> {
   const values = formToObject(formData);
-  const n = Number((values.taxRate ?? "").trim().replace(",", "."));
-  if (!Number.isFinite(n) || n < 0 || n > 100) {
-    return { ok: false, values, errors: { taxRate: ["Bitte einen Wert zwischen 0 und 100 eingeben."] } };
+  const raw = (values.taxRate ?? "").trim();
+  const n = raw === "0" ? 0 : parseDecimal(raw);
+  if (n === null || n < 0 || n > 100) {
+    return { ok: false, values, errors: { taxRate: [msg("taxRateRange")] } };
   }
   const data = { dividendTaxRate: n / 100 };
   await db.appSettings.upsert({ where: { id: 1 }, create: { id: 1, ...data }, update: data });
-  revalidatePath("/", "layout");
-  return { ok: true, message: "Gespeichert.", values };
+  revalidateApp();
+  return { ok: true, message: msg("saved"), values };
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { TriangleAlert } from "lucide-react";
+import { getI18n } from "@/i18n/server";
 
 export function PageHeader({
   title,
@@ -32,12 +33,19 @@ export function StatCard({
   value: string;
   hint?: ReactNode;
   tone?: "neutral" | "positive" | "negative";
-  /** Hervorgehobene Karte (z.B. Net Worth). */
+  /** Hervorgehobene Karte (z.B. Nettovermögen). */
   featured?: boolean;
 }) {
   if (featured) {
+    // grün bei Guthaben, rot bei negativem Wert, blau bei 0
+    const gradient =
+      tone === "positive"
+        ? "from-emerald-600 to-teal-700 shadow-emerald-700/20"
+        : tone === "negative"
+          ? "from-red-600 to-rose-700 shadow-red-700/20"
+          : "from-blue-600 to-indigo-700 shadow-blue-700/20";
     return (
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-5 text-white shadow-lg shadow-blue-700/20">
+      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 text-white shadow-lg`}>
         <div aria-hidden className="pointer-events-none absolute -top-10 -right-10 size-40 rounded-full bg-white/10 blur-2xl" />
         <div className="text-xs font-medium tracking-wide text-white/75 uppercase">{label}</div>
         <div className="mt-2 text-[1.7rem] leading-none font-semibold tracking-tight tabular-nums">{value}</div>
@@ -63,12 +71,13 @@ export function EmptyState({ children }: { children: ReactNode }) {
   );
 }
 
-export function Notice({ children }: { children: ReactNode }) {
+export async function Notice({ children }: { children: ReactNode }) {
+  const { t } = await getI18n();
   return (
     <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-warn-line bg-warn-soft px-4 py-3 text-sm text-warn-ink">
       <TriangleAlert aria-hidden className="mt-0.5 size-[1.1em] shrink-0" />
       <span>
-        <strong className="font-semibold">Hinweis: </strong>
+        <strong className="font-semibold">{t.common.noticePrefix} </strong>
         {children}
       </span>
     </div>

@@ -27,8 +27,8 @@ export type RowStatus = "new" | "imported" | "possible-duplicate";
 export type AnalyzedRow = {
   index: number;
   status: RowStatus;
-  /** Bei möglichem Duplikat: kurze Beschreibung der vorhandenen Buchung. */
-  match?: string;
+  /** Bei möglichem Duplikat: die vorhandene Buchung (Anzeige formatiert der Browser). */
+  match?: { date: string; category: string; note: string | null; amountCents: number };
   suggestedCategory: string;
   /** Woher der Vorschlag kommt. */
   suggestionSource: "history" | "rule" | "default";

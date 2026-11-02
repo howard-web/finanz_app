@@ -77,6 +77,15 @@
   --chart-text-secondary: #52514e;
   --chart-grid: #e7e5e4;
   --chart-cursor: rgb(0 0 0 / 0.04);
+  /* Kategorien für das Ausgaben-Diagramm: feste Ring-Reihenfolge, alle
+     Nachbarpaare validiert (CVD + Normalsicht). Kein Grün/Rot (= Gewinn/Verlust). */
+  --cat-1: #2a78d6;
+  --cat-2: #eb6834;
+  --cat-3: #1baf7a;
+  --cat-4: #eda100;
+  --cat-5: #6250d6;
+  --cat-6: #e87ba4;
+  --cat-other: #a8a29e;
 }
 
 .dark {
@@ -111,6 +120,13 @@
   --chart-text-secondary: #c3c2b7;
   --chart-grid: #2e2d2b;
   --chart-cursor: rgb(255 255 255 / 0.05);
+  --cat-1: #3987e5;
+  --cat-2: #d95926;
+  --cat-3: #199e70;
+  --cat-4: #c98500;
+  --cat-5: #9085e9;
+  --cat-6: #d55181;
+  --cat-other: #6d6b65;
 }
 
 /* Basis-Schriftgröße 150 %: alle Tailwind-Größen sind rem und skalieren mit.

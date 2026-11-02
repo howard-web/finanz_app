@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseAmountToCents } from "./money";
+import { parseAmountToCents, parseDecimal } from "./money";
 import { parseDateInput } from "./dates";
 import {
   EXPENSE_CATEGORIES,
@@ -7,22 +7,24 @@ import {
   RECURRING_INTERVALS,
   TRANSACTION_TYPES,
 } from "./categories";
+import type { Msg } from "@/i18n/translate";
 
-const amountCents = z
-  .string()
-  .transform((v, ctx) => {
-    const cents = parseAmountToCents(v);
-    if (cents === null || cents <= 0) {
-      ctx.addIssue({ code: "custom", message: "Bitte einen Betrag größer 0 eingeben." });
-      return z.NEVER;
-    }
-    return cents;
-  });
+// Alle Fehlermeldungen sind Schlüssel aus `msg` im Wörterbuch (src/i18n/dictionaries).
+// Server Actions kennen die Sprache nicht; übersetzt wird im Browser.
+
+const amountCents = z.string().transform((v, ctx) => {
+  const cents = parseAmountToCents(v);
+  if (cents === null || cents <= 0) {
+    ctx.addIssue({ code: "custom", message: "amountPositive" });
+    return z.NEVER;
+  }
+  return cents;
+});
 
 const dateField = z.string().transform((v, ctx) => {
   const d = parseDateInput(v);
   if (!d) {
-    ctx.addIssue({ code: "custom", message: "Bitte ein gültiges Datum wählen." });
+    ctx.addIssue({ code: "custom", message: "dateInvalid" });
     return z.NEVER;
   }
   return d;
@@ -31,53 +33,48 @@ const dateField = z.string().transform((v, ctx) => {
 const note = z
   .string()
   .trim()
-  .max(500, "Notiz ist zu lang.")
+  .max(500, "noteTooLong")
   .transform((v) => (v === "" ? null : v));
 
-const positiveNumber = (label: string) =>
+const positiveNumber = (messageKey: string) =>
   z.string().transform((v, ctx) => {
-    const n = Number(v.trim().replace(",", "."));
-    if (!Number.isFinite(n) || n <= 0) {
-      ctx.addIssue({ code: "custom", message: `${label} muss größer 0 sein.` });
+    const n = parseDecimal(v);
+    if (n === null || n <= 0) {
+      ctx.addIssue({ code: "custom", message: messageKey });
       return z.NEVER;
     }
     return n;
   });
 
-function withCategoryCheck<T extends { type: string; category: string }>(
-  schema: z.ZodType<T>,
-) {
+function withCategoryCheck<T extends { type: string; category: string }>(schema: z.ZodType<T>) {
   return schema.refine(
-    (d) =>
-      (d.type === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).includes(
-        d.category as never,
-      ),
-    { message: "Kategorie passt nicht zum Typ.", path: ["category"] },
+    (d) => (d.type === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).includes(d.category as never),
+    { message: "categoryMismatch", path: ["category"] },
   );
 }
 
 export const transactionSchema = withCategoryCheck(
   z.object({
     amount: amountCents,
-    type: z.enum(TRANSACTION_TYPES, { message: "Typ fehlt." }),
-    category: z.string().min(1, "Kategorie fehlt."),
+    type: z.enum(TRANSACTION_TYPES, { message: "typeMissing" }),
+    category: z.string().min(1, "categoryMissing"),
     date: dateField,
     note: note,
     isRecurring: z
       .string()
       .optional()
       .transform((v) => v === "on"),
-    interval: z.enum(RECURRING_INTERVALS).default("MONTHLY"),
+    interval: z.enum(RECURRING_INTERVALS, { message: "invalid" }).default("MONTHLY"),
   }),
 );
 
 export const recurringRuleUpdateSchema = withCategoryCheck(
   z.object({
     amount: amountCents,
-    type: z.enum(TRANSACTION_TYPES),
-    category: z.string().min(1, "Kategorie fehlt."),
+    type: z.enum(TRANSACTION_TYPES, { message: "typeMissing" }),
+    category: z.string().min(1, "categoryMissing"),
     note: note,
-    interval: z.enum(RECURRING_INTERVALS),
+    interval: z.enum(RECURRING_INTERVALS, { message: "invalid" }),
   }),
 );
 
@@ -86,8 +83,8 @@ export const assetSchema = z.object({
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-Z0-9.\-=^]{1,20}$/, "Ungültiges Ticker-Symbol."),
-  shares: positiveNumber("Anzahl"),
+    .regex(/^[A-Z0-9.\-=^]{1,20}$/, "tickerInvalid"),
+  shares: positiveNumber("sharesPositive"),
   buyPrice: amountCents,
   buyDate: dateField,
 });
@@ -96,7 +93,7 @@ export const openingBalanceSchema = z.object({
   amount: z.string().transform((v, ctx) => {
     const cents = parseAmountToCents(v);
     if (cents === null) {
-      ctx.addIssue({ code: "custom", message: "Bitte einen Betrag eingeben (negativ bei Dispo)." });
+      ctx.addIssue({ code: "custom", message: "amountRequired" });
       return z.NEVER;
     }
     return cents;
@@ -106,8 +103,8 @@ export const openingBalanceSchema = z.object({
 
 export type FormState = {
   ok?: boolean;
-  message?: string;
-  errors?: Record<string, string[] | undefined>;
+  message?: Msg;
+  errors?: Record<string, Msg[] | undefined>;
   /** Eingegebene Werte, damit das Formular nach dem automatischen Reset (React 19) gefüllt bleibt. */
   values?: Record<string, string>;
 };
@@ -123,10 +120,15 @@ export function formToObject(formData: FormData): Record<string, string> {
 }
 
 export function zodErrors(error: z.ZodError, values?: Record<string, string>): FormState {
-  return {
-    ok: false,
-    values,
-    message: "Bitte die markierten Felder prüfen.",
-    errors: z.flattenError(error).fieldErrors as Record<string, string[]>,
-  };
+  const fieldErrors = z.flattenError(error).fieldErrors as Record<string, string[] | undefined>;
+  const errors: Record<string, Msg[]> = {};
+  for (const [field, keys] of Object.entries(fieldErrors)) {
+    if (keys?.length) errors[field] = keys.map((key) => ({ key }));
+  }
+  return { ok: false, values, message: { key: "checkFields" }, errors };
+}
+
+/** Kurzform für eine einzelne Meldung. */
+export function msg(key: string, params?: Msg["params"]): Msg {
+  return { key, params };
 }

@@ -2,24 +2,22 @@
 
 import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { formatEUR } from "@/lib/money";
+import { useI18n } from "@/i18n/client";
 import { useRemScale } from "./useRemScale";
 
 type Point = { date: string; value: number };
 
 const RANGES = [
-  { key: "1M", label: "1M", days: 31 },
-  { key: "6M", label: "6M", days: 183 },
-  { key: "1Y", label: "1J", days: 366 },
-  { key: "MAX", label: "Max", days: Infinity },
+  { key: "1M", days: 31 },
+  { key: "6M", days: 183 },
+  { key: "1Y", days: 366 },
+  { key: "MAX", days: Infinity },
 ] as const;
 
-const shortDate = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "short", timeZone: "UTC" });
-const longDate = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "long", year: "numeric", timeZone: "UTC" });
-const compactEUR = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", notation: "compact", maximumFractionDigits: 1 });
 
 export function PortfolioLine({ data }: { data: Point[] }) {
   const s = useRemScale();
+  const { t, fmt } = useI18n();
   const [range, setRange] = useState<(typeof RANGES)[number]["key"]>("MAX");
 
   const visible = useMemo(() => {
@@ -32,7 +30,7 @@ export function PortfolioLine({ data }: { data: Point[] }) {
 
   return (
     <div>
-      <div className="mb-3 flex justify-end gap-1" role="group" aria-label="Zeitraum">
+      <div className="mb-3 flex justify-end gap-1" role="group" aria-label={t.charts.range}>
         {RANGES.map((r) => (
           <button
             key={r.key}
@@ -43,11 +41,11 @@ export function PortfolioLine({ data }: { data: Point[] }) {
               range === r.key ? "bg-ink text-canvas" : "text-ink-2 hover:bg-surface-2"
             }`}
           >
-            {r.label}
+            {t.charts.ranges[r.key]}
           </button>
         ))}
       </div>
-      <div className="h-64" role="img" aria-label="Depotwert über die Zeit">
+      <div className="h-64" role="img" aria-label={t.charts.portfolioAria}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={visible} margin={{ top: 8 * s, right: 8 * s, bottom: 0, left: 0 }}>
             <defs>
@@ -59,14 +57,14 @@ export function PortfolioLine({ data }: { data: Point[] }) {
             <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
             <XAxis
               dataKey="date"
-              tickFormatter={(d) => shortDate.format(new Date(d))}
+              tickFormatter={(d) => fmt.dateShort(new Date(d))}
               tickLine={false}
               axisLine={false}
               minTickGap={40 * s}
               tick={{ fill: "var(--chart-text-secondary)", fontSize: 12 * s }}
             />
             <YAxis
-              tickFormatter={(v) => compactEUR.format(v)}
+              tickFormatter={(v) => fmt.eurCompact(v)}
               tickLine={false}
               axisLine={false}
               width={64 * s}
@@ -80,8 +78,8 @@ export function PortfolioLine({ data }: { data: Point[] }) {
                 const p = payload[0].payload as Point;
                 return (
                   <div className="rounded-lg border border-line bg-surface px-3 py-2 text-sm shadow-md">
-                    <div className="text-xs text-ink-3">{longDate.format(new Date(p.date))}</div>
-                    <div className="font-medium tabular-nums">{formatEUR(p.value)}</div>
+                    <div className="text-xs text-ink-3">{fmt.dateLong(new Date(p.date))}</div>
+                    <div className="font-medium tabular-nums">{fmt.eur(p.value)}</div>
                   </div>
                 );
               }}

@@ -4,17 +4,18 @@ import Link from "next/link";
 import { updateTransaction } from "@/actions/transactions";
 import { TransactionForm } from "@/components/forms/TransactionForm";
 import { PageHeader, Skeleton } from "@/components/ui";
+import { getI18n } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { toDateInput } from "@/lib/dates";
-import { centsToInput } from "@/lib/money";
 import type { TransactionType } from "@/lib/categories";
 
-export default function EditTransactionPage({ params }: PageProps<"/transactions/[id]/edit">) {
+export default async function EditTransactionPage({ params }: PageProps<"/[lang]/transactions/[id]/edit">) {
+  const { t, href } = await getI18n();
   return (
     <>
-      <PageHeader title="Buchung bearbeiten">
-        <Link href="/transactions" className="btn-secondary">
-          Zurück
+      <PageHeader title={t.cashflow.editTitle}>
+        <Link href={href("/transactions")} className="btn-secondary">
+          {t.common.back}
         </Link>
       </PageHeader>
       <section className="card max-w-md">
@@ -28,23 +29,22 @@ export default function EditTransactionPage({ params }: PageProps<"/transactions
 
 async function EditForm({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const t = await db.transaction.findUnique({ where: { id } });
-  if (!t) notFound();
+  const { lang, t, fmt } = await getI18n();
+  const tx = await db.transaction.findUnique({ where: { id } });
+  if (!tx) notFound();
   return (
     <>
-      {t.recurringRuleId && (
-        <p className="mb-4 rounded-lg bg-accent-soft p-3 text-xs text-accent-ink">
-          Diese Buchung stammt aus einer wiederkehrenden Regel. Änderungen gelten nur für diese eine Buchung.
-        </p>
+      {tx.recurringRuleId && (
+        <p className="mb-4 rounded-lg bg-accent-soft p-3 text-xs text-accent-ink">{t.cashflow.fromRuleNotice}</p>
       )}
       <TransactionForm
-        action={updateTransaction.bind(null, t.id)}
+        action={updateTransaction.bind(null, lang, tx.id)}
         defaults={{
-          amount: centsToInput(t.amountCents),
-          type: t.type as TransactionType,
-          category: t.category,
-          date: toDateInput(t.date),
-          note: t.note ?? "",
+          amount: fmt.centsInput(tx.amountCents),
+          type: tx.type as TransactionType,
+          category: tx.category,
+          date: toDateInput(tx.date),
+          note: tx.note ?? "",
         }}
       />
     </>

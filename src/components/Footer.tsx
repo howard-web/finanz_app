@@ -1,4 +1,5 @@
 import { cacheLife } from "next/cache";
+import { getI18n } from "@/i18n/server";
 import { version } from "../../package.json";
 
 const AUTHOR = "Ralf Völker";
@@ -10,10 +11,11 @@ async function CurrentYear() {
   return <>{new Date().getFullYear()}</>;
 }
 
-export function Footer() {
+export async function Footer() {
+  const { t } = await getI18n();
   return (
     <footer className="mx-auto w-full max-w-7xl border-t border-line px-4 py-4 text-xs text-ink-3 md:px-8">
-      © <CurrentYear /> {AUTHOR} · Version {version}
+      © <CurrentYear /> {AUTHOR} · {t.footer.version} {version}
     </footer>
   );
 }

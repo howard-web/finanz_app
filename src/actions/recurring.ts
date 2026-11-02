@@ -1,12 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { nextOccurrenceAfterToday } from "@/lib/recurring";
+import { revalidateApp } from "@/lib/revalidate";
+import { DEFAULT_LOCALE, hasLocale, localizePath } from "@/i18n/config";
 import { formToObject, recurringRuleUpdateSchema, zodErrors, type FormState } from "@/lib/validation";
 
 export async function updateRecurringRule(
+  lang: string,
   id: string,
   _prev: FormState,
   formData: FormData,
@@ -30,8 +32,8 @@ export async function updateRecurringRule(
   }
   await db.recurringRule.update({ where: { id }, data });
 
-  revalidatePath("/", "layout");
-  redirect("/recurring");
+  revalidateApp();
+  redirect(localizePath(hasLocale(lang) ? lang : DEFAULT_LOCALE, "/recurring"));
 }
 
 export async function toggleRecurringRule(id: string): Promise<void> {
@@ -43,11 +45,11 @@ export async function toggleRecurringRule(id: string): Promise<void> {
       : // Beim Fortsetzen werden verpasste Termine nicht nachgebucht.
         { active: true, nextDue: nextOccurrenceAfterToday(rule) },
   });
-  revalidatePath("/", "layout");
+  revalidateApp();
 }
 
 /** Löscht die Regel. Bereits gebuchte Transaktionen bleiben erhalten. */
 export async function deleteRecurringRule(id: string): Promise<void> {
   await db.recurringRule.delete({ where: { id } });
-  revalidatePath("/", "layout");
+  revalidateApp();
 }

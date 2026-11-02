@@ -1,57 +1,34 @@
-const eurFormatter = new Intl.NumberFormat("de-DE", {
-  style: "currency",
-  currency: "EUR",
-});
-
-/** Formatiert einen Cent-Betrag als Euro, z.B. 123456 -> "1.234,56 €". */
-export function formatCents(cents: number): string {
-  return eurFormatter.format(cents / 100);
-}
-
-/** Formatiert einen Euro-Betrag (Float). */
-export function formatEUR(amount: number): string {
-  return eurFormatter.format(amount);
-}
-
-/** Formatiert einen Betrag in beliebiger Währung (GBp wird als Pence angezeigt). */
-export function formatMoney(amount: number, currency: string): string {
-  if (currency === "GBp" || currency === "GBX") {
-    return `${amount.toLocaleString("de-DE", { maximumFractionDigits: 2 })} GBp`;
-  }
-  try {
-    return new Intl.NumberFormat("de-DE", { style: "currency", currency }).format(amount);
-  } catch {
-    return `${amount.toLocaleString("de-DE", { maximumFractionDigits: 2 })} ${currency}`;
-  }
-}
-
-export function formatPercent(value: number): string {
-  return new Intl.NumberFormat("de-DE", {
-    style: "percent",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    signDisplay: "exceptZero",
-  }).format(value);
-}
-
 /**
- * Wandelt eine Eingabe wie "12,50", "12.50" oder "1.234,56" in Cent um.
+ * Wandelt eine Betragseingabe in Cent um. Versteht deutsche und englische
+ * Schreibweise: "12,50", "12.50", "1.234,56", "1,234.56", "1.234", "-150".
+ * Regel: Das letzte Komma bzw. der letzte Punkt ist nur dann Dezimaltrenner,
+ * wenn danach 1–2 Ziffern folgen; sonst sind es Tausendertrenner.
  * Gibt null zurück, wenn die Eingabe keine gültige Zahl ist.
  */
 export function parseAmountToCents(input: string): number | null {
-  let s = input.trim().replace(/\s|€/g, "");
+  let s = input.trim().replace(/[\s€]|eur/gi, "");
   if (!s) return null;
-  if (s.includes(",")) {
-    s = s.replace(/\./g, "").replace(",", ".");
-  } else if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
-    // "1.234" ohne Komma = Tausenderpunkt
-    s = s.replace(/\./g, "");
+  let negative = false;
+  if (/^[-−]/.test(s)) {
+    negative = true;
+    s = s.slice(1);
   }
-  if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
-  return Math.round(parseFloat(s) * 100);
+  const dec = s.match(/[.,](\d{1,2})$/);
+  let intPart = dec ? s.slice(0, dec.index) : s;
+  const fracPart = dec ? dec[1].padEnd(2, "0") : "00";
+  // Tausendertrenner nur in korrekten Dreiergruppen akzeptieren
+  if (/[.,]/.test(intPart)) {
+    if (!/^\d{1,3}([.,]\d{3})+$/.test(intPart)) return null;
+    intPart = intPart.replace(/[.,]/g, "");
+  }
+  if (!/^\d+$/.test(intPart)) return null;
+  const cents = parseInt(intPart, 10) * 100 + parseInt(fracPart, 10);
+  return negative ? -cents : cents;
 }
 
-/** Cent -> String für Formular-Vorbelegung, z.B. 1250 -> "12,50". */
-export function centsToInput(cents: number): string {
-  return (cents / 100).toFixed(2).replace(".", ",");
+/** Zahl wie Aktienanzahl oder Prozentsatz: "1,5" und "1.5" werden beide akzeptiert. */
+export function parseDecimal(input: string): number | null {
+  const s = input.trim().replace(/\s/g, "");
+  if (!/^\d+([.,]\d+)?$/.test(s)) return null;
+  return Number(s.replace(",", "."));
 }
