@@ -1,12 +1,15 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { saveDividendTaxRate } from "@/actions/dividends";
 import { clearOpeningBalance, saveOpeningBalance } from "@/actions/settings";
 import { DeleteButton } from "@/components/DeleteButton";
+import { DividendTaxForm } from "@/components/forms/DividendTaxForm";
 import { OpeningBalanceForm } from "@/components/forms/OpeningBalanceForm";
 import { PageHeader, Skeleton, signedClass } from "@/components/ui";
 import { getCashBalance } from "@/lib/cashflow";
 import { formatDate, toDateInput, todayUTC } from "@/lib/dates";
 import { centsToInput, formatCents } from "@/lib/money";
+import { getDividendTaxRate } from "@/lib/dividends";
 import { materializeRecurring } from "@/lib/recurring";
 
 export default function SettingsPage() {
@@ -23,7 +26,7 @@ export default function SettingsPage() {
 async function OpeningBalanceSection() {
   await connection();
   await materializeRecurring();
-  const cash = await getCashBalance();
+  const [cash, taxRate] = await Promise.all([getCashBalance(), getDividendTaxRate()]);
   const today = toDateInput(todayUTC());
 
   return (
@@ -46,6 +49,14 @@ async function OpeningBalanceSection() {
             <DeleteButton action={clearOpeningBalance} label="Startguthaben entfernen" />
           </div>
         )}
+      </section>
+
+      <section className="card">
+        <h2 className="mb-3 font-semibold">Dividenden</h2>
+        <DividendTaxForm
+          action={saveDividendTaxRate}
+          defaultRate={(taxRate * 100).toLocaleString("de-DE", { maximumFractionDigits: 3 })}
+        />
       </section>
 
       <section className="card">

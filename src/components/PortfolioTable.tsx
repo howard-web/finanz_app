@@ -20,6 +20,7 @@ export function PortfolioTable({ summary }: { summary: PortfolioSummary }) {
             <th className="th-cell text-right">Kurs</th>
             <th className="th-cell text-right">Wert (EUR)</th>
             <th className="th-cell text-right">G/V (EUR)</th>
+            <th className="th-cell text-right">Dividenden</th>
           </tr>
         </thead>
         {summary.positions.map((p) => (
@@ -44,13 +45,16 @@ export function PortfolioTable({ summary }: { summary: PortfolioSummary }) {
                 {p.pnlEUR !== null ? formatEUR(p.pnlEUR) : dash}
                 {p.pnlPct !== null && <div className="text-xs">{formatPercent(p.pnlPct)}</div>}
               </td>
+              <td className="td-cell text-right tabular-nums">
+                {p.dividendsEUR > 0 ? <span className="text-emerald-700">+{formatEUR(p.dividendsEUR)}</span> : dash}
+              </td>
             </tr>
             {p.lots.map((lot) => (
               <tr key={lot.id} className="text-xs text-stone-500">
                 <td className="py-1 pr-3 pl-6" colSpan={2}>
                   Kauf {formatDate(lot.buyDate)}: {lot.shares.toLocaleString("de-DE")} × {formatMoney(lot.buyPriceCents / 100, lot.currency)}
                 </td>
-                <td className="py-1 pr-3 text-right" colSpan={4}>
+                <td className="py-1 pr-3 text-right" colSpan={5}>
                   <Link href={`/portfolio/${lot.id}/edit`} className="btn-ghost">Bearbeiten</Link>
                   <DeleteButton action={deleteAsset.bind(null, lot.id)} />
                 </td>

@@ -15,6 +15,7 @@ async function main() {
   await db.transaction.deleteMany();
   await db.recurringRule.deleteMany();
   await db.asset.deleteMany();
+  await db.dividendDismissal.deleteMany();
 
   // Startguthaben: Kontostand am Tag vor der ersten Beispielbuchung
   const opening = { openingBalanceCents: 245000, openingBalanceDate: d(3, 0) };

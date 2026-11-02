@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/transactions", label: "Cashflow" },
   { href: "/recurring", label: "Abos & Daueraufträge" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/dividends", label: "Dividenden" },
   { href: "/import", label: "CSV-Import" },
   { href: "/settings", label: "Einstellungen" },
 ] as const;

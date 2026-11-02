@@ -22,6 +22,10 @@ npm run dev
 - **Kurse** werden in `PriceCache` bis zu 6 h zwischengespeichert. Ist Yahoo nicht erreichbar, wird der letzte bekannte Kurs angezeigt und als veraltet markiert.
 - **FX:** Fremdwährungen werden mit dem aktuellen Kurs nach EUR umgerechnet (`EUR=X`, `GBPEUR=X` usw.). GBp/Pence werden durch 100 geteilt.
 - **Depotverlauf:** historische Schlusskurse × Bestand ab Kaufdatum.
+- **Dividenden** (`/dividends`): Ex-Tage und Beträge pro Aktie kommen von Yahoo (`chart` mit `events: "div"`), gerechnet wird mit dem Bestand vor dem Ex-Tag.
+  - Vorschläge zeigen brutto und ein geschätztes Netto (Steuersatz in `/settings`, Standard 26,375 %). Gebucht wird der tatsächlich erhaltene Betrag.
+  - Eine bereits per CSV importierte Gutschrift lässt sich verknüpfen statt neu buchen (`Transaction.dividendKey`), ignorierte Vorschläge landen in `DividendDismissal`.
+  - Im Portfolio erscheinen die Dividenden pro Position und in der Gesamtrendite.
 - **Net Worth** = Kontostand + aktueller Depotwert.
 - **Kontostand** = Startguthaben (Kontostand am Ende eines Stichtags, unter `/settings`) + alle Buchungen *nach* dem Stichtag. Ohne Startguthaben: Saldo aller Buchungen. Buchungen am/vor dem Stichtag zählen weiter in den Monatsauswertungen.
 - **CSV-Import** (`/import`): Die Datei wird im Browser geparst (Zeichensatz, Trennzeichen und Kopfzeile werden automatisch erkannt; Spalten für Sparkasse, ING, DKB, comdirect, Volksbank und N26). Der Server prüft gegen die DB:

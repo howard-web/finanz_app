@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { getQuotes, getHistory } from "@/lib/market/yahoo";
 import { getFxRates } from "@/lib/market/fx";
+import { getDividendTotalsBySymbol } from "@/lib/dividends";
 import type { Asset } from "@/generated/prisma/client";
 
 export type Position = {
@@ -17,6 +18,8 @@ export type Position = {
   costEUR: number | null;
   pnlEUR: number | null;
   pnlPct: number | null;
+  /** Erhaltene Dividenden (netto, gebucht/verknüpft) in EUR. */
+  dividendsEUR: number;
   stale: boolean;
   fetchedAt: Date | null;
   lots: Asset[];
@@ -28,6 +31,10 @@ export type PortfolioSummary = {
   totalCostEUR: number;
   totalPnlEUR: number;
   totalPnlPct: number | null;
+  totalDividendsEUR: number;
+  /** Kursgewinn + Dividenden */
+  totalReturnEUR: number;
+  totalReturnPct: number | null;
   /** Mindestens ein Kurs ist veraltet oder fehlt. */
   hasStaleData: boolean;
   missingSymbols: string[];
@@ -40,7 +47,10 @@ export async function getPortfolio(): Promise<PortfolioSummary> {
   for (const a of assets) groups.set(a.symbol, [...(groups.get(a.symbol) ?? []), a]);
 
   const quotes = await getQuotes([...groups.keys()]);
-  const fx = await getFxRates(assets.map((a) => a.currency));
+  const [fx, dividends] = await Promise.all([
+    getFxRates(assets.map((a) => a.currency)),
+    getDividendTotalsBySymbol(),
+  ]);
 
   const positions: Position[] = [];
   for (const [symbol, lots] of groups) {
@@ -66,6 +76,7 @@ export async function getPortfolio(): Promise<PortfolioSummary> {
       costEUR,
       pnlEUR,
       pnlPct: pnlEUR !== null && costEUR ? pnlEUR / costEUR : null,
+      dividendsEUR: dividends.get(symbol) ?? 0,
       stale: !quote || quote.stale || fx.stale,
       fetchedAt: quote?.fetchedAt ?? null,
       lots,
@@ -76,6 +87,8 @@ export async function getPortfolio(): Promise<PortfolioSummary> {
   const totalValueEUR = priced.reduce((s, p) => s + (p.valueEUR ?? 0), 0);
   const totalCostEUR = priced.reduce((s, p) => s + (p.costEUR ?? 0), 0);
   const totalPnlEUR = totalValueEUR - totalCostEUR;
+  const totalDividendsEUR = positions.reduce((s, p) => s + p.dividendsEUR, 0);
+  const totalReturnEUR = totalPnlEUR + totalDividendsEUR;
 
   return {
     positions: positions.sort((a, b) => (b.valueEUR ?? 0) - (a.valueEUR ?? 0)),
@@ -83,6 +96,9 @@ export async function getPortfolio(): Promise<PortfolioSummary> {
     totalCostEUR,
     totalPnlEUR,
     totalPnlPct: totalCostEUR ? totalPnlEUR / totalCostEUR : null,
+    totalDividendsEUR,
+    totalReturnEUR,
+    totalReturnPct: totalCostEUR ? totalReturnEUR / totalCostEUR : null,
     hasStaleData: positions.some((p) => p.stale),
     missingSymbols: positions.filter((p) => p.valueEUR === null).map((p) => p.symbol),
   };

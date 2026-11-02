@@ -8,6 +8,7 @@ import { EmptyState, Notice, PageHeader, Skeleton, StatCard } from "@/components
 import { getCashBalance, getExpensesByCategory, getMonthlyFixedCostsCents } from "@/lib/cashflow";
 import { currentMonth, formatDate, formatMonth, isValidMonth } from "@/lib/dates";
 import { formatCents, formatEUR, formatPercent } from "@/lib/money";
+import { getDividendProposals } from "@/lib/dividends";
 import { getPortfolio, getPortfolioHistory } from "@/lib/portfolio";
 import { materializeRecurring } from "@/lib/recurring";
 
@@ -15,6 +16,9 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
   return (
     <>
       <PageHeader title="Dashboard" />
+      <Suspense fallback={null}>
+        <DividendNotice />
+      </Suspense>
       <Suspense fallback={<StatsSkeleton />}>
         <Stats />
       </Suspense>
@@ -27,6 +31,24 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
         </Suspense>
       </div>
     </>
+  );
+}
+
+async function DividendNotice() {
+  await connection();
+  const { proposals } = await getDividendProposals();
+  if (proposals.length === 0) return null;
+  const gross = proposals.reduce((s, p) => s + p.grossEUR, 0);
+  return (
+    <Link
+      href="/dividends"
+      className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 hover:bg-blue-100"
+    >
+      <span>
+        💰 {proposals.length} neue Dividende{proposals.length === 1 ? "" : "n"} erkannt ({formatEUR(gross)} brutto). Jetzt prüfen und buchen.
+      </span>
+      <span aria-hidden>→</span>
+    </Link>
   );
 }
 

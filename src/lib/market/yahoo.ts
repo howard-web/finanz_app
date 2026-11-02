@@ -124,3 +124,34 @@ export async function getHistory(symbol: string, from: Date): Promise<HistoryPoi
     return [];
   }
 }
+
+export type DividendEvent = {
+  /** Ex-Tag als YYYY-MM-DD */
+  exDate: string;
+  /** Betrag pro Aktie in Handelswährung (brutto) */
+  amount: number;
+};
+
+async function fetchDividendsCached(symbol: string, fromISO: string): Promise<DividendEvent[]> {
+  "use cache";
+  cacheLife("hours");
+
+  const chart = (await yf.chart(
+    symbol,
+    { period1: new Date(fromISO), interval: "1mo", events: "div" },
+    { validateResult: false },
+  )) as { events?: { dividends?: { amount: number; date: Date | string }[] } };
+  return (chart.events?.dividends ?? [])
+    .filter((d) => typeof d.amount === "number" && d.amount > 0)
+    .map((d) => ({ exDate: new Date(d.date).toISOString().slice(0, 10), amount: d.amount }));
+}
+
+/** Dividenden (Ex-Tage) ab `from`. Bei Fehlern leeres Array. */
+export async function getDividends(symbol: string, from: Date): Promise<DividendEvent[]> {
+  try {
+    return await fetchDividendsCached(symbol.toUpperCase(), from.toISOString().slice(0, 10));
+  } catch (err) {
+    console.error(`[yahoo] dividends ${symbol} fehlgeschlagen:`, (err as Error).message);
+    return [];
+  }
+}

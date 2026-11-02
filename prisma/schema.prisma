@@ -23,12 +23,17 @@ model Transaction {
   importKey       String?        @unique
   /// Kennung des Imports, für "Import rückgängig machen"
   importBatch     String?
+  /// Wertpapier, zu dem die Buchung gehört (z.B. Dividende)
+  assetSymbol     String?
+  /// Verknüpfte Dividende "SYMBOL|YYYY-MM-DD" (Ex-Tag); verhindert erneute Vorschläge
+  dividendKey     String?        @unique
   createdAt       DateTime       @default(now())
 
   @@unique([recurringRuleId, date])
   @@index([date])
   @@index([importBatch])
   @@index([counterparty])
+  @@index([assetSymbol])
 }
 
 /// Vorlage für wiederkehrende Buchungen (Abos, Gehalt, Miete ...).
@@ -76,5 +81,13 @@ model AppSettings {
   openingBalanceCents Int       @default(0)
   /// Stichtag; null = kein Startguthaben gesetzt
   openingBalanceDate  DateTime?
+  /// Pauschaler Steuersatz für die Netto-Schätzung von Dividenden (0.26375 = Abgeltungsteuer + Soli)
+  dividendTaxRate     Float     @default(0.26375)
   updatedAt           DateTime  @updatedAt
+}
+
+/// Ignorierte Dividenden-Vorschläge (Schlüssel wie Transaction.dividendKey).
+model DividendDismissal {
+  key       String   @id
+  createdAt DateTime @default(now())
 }

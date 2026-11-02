@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { connection } from "next/server";
 import { createAsset } from "@/actions/assets";
 import { AssetForm } from "@/components/forms/AssetForm";
@@ -54,7 +55,7 @@ async function Holdings() {
           {summary.missingSymbols.length > 0 && ` Ohne Kurs: ${summary.missingSymbols.join(", ")}.`}
         </Notice>
       )}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <StatCard label="Depotwert" value={formatEUR(summary.totalValueEUR)} />
         <StatCard label="Investiert" value={formatEUR(summary.totalCostEUR)} hint="zum aktuellen Wechselkurs" />
         <StatCard
@@ -62,6 +63,18 @@ async function Holdings() {
           value={formatEUR(summary.totalPnlEUR)}
           tone={toneOf(summary.totalPnlEUR)}
           hint={summary.totalPnlPct !== null ? formatPercent(summary.totalPnlPct) : undefined}
+        />
+        <StatCard
+          label="Gesamtrendite"
+          value={formatEUR(summary.totalReturnEUR)}
+          tone={toneOf(summary.totalReturnEUR)}
+          hint={
+            <>
+              inkl. {formatEUR(summary.totalDividendsEUR)}{" "}
+              <Link href="/dividends" className="underline">Dividenden</Link>
+              {summary.totalReturnPct !== null && ` · ${formatPercent(summary.totalReturnPct)}`}
+            </>
+          }
         />
       </div>
       <div className="card p-2">
