@@ -43,12 +43,12 @@ async function ImportHistory() {
   return (
     <section>
       <h2 className="mb-2 font-semibold">Letzte Importe</h2>
-      <div className="card divide-y divide-stone-100 p-0">
+      <div className="card divide-y divide-line-soft p-0">
         {batches.map((b) => (
           <div key={b.importBatch} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
             <div>
               <span className="font-medium">{b._count._all} Buchungen</span>
-              <span className="text-stone-500">
+              <span className="text-ink-3">
                 {" "}· {formatDate(b._min.date!)} – {formatDate(b._max.date!)} · importiert am{" "}
                 {b._max.createdAt!.toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
               </span>

@@ -28,7 +28,7 @@ export function OpeningBalanceForm({ action, defaults, maxDate }: Props) {
           <FieldError state={state} name="date" />
         </div>
       </div>
-      <p className="text-xs text-stone-500">
+      <p className="text-xs text-ink-3">
         Trage den Kontostand ein, wie er auf dem Kontoauszug am Ende dieses Tages steht. Buchungen am Stichtag und davor sind darin schon enthalten und werden nicht nochmal gezählt. Bei Dispo einen negativen Betrag eintragen.
       </p>
       <div className="flex items-center gap-3">

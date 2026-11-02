@@ -33,7 +33,7 @@ async function OpeningBalanceSection() {
     <div className="grid max-w-2xl gap-6">
       <section className="card">
         <h2 className="font-semibold">Startguthaben</h2>
-        <p className="mb-4 text-sm text-stone-500">
+        <p className="mb-4 text-sm text-ink-3">
           Damit Net Worth deinem echten Kontostand entspricht und nicht bei 0 € beginnt.
         </p>
         <OpeningBalanceForm
@@ -45,7 +45,7 @@ async function OpeningBalanceSection() {
           }}
         />
         {cash.opening && (
-          <div className="mt-4 border-t border-stone-100 pt-3">
+          <div className="mt-4 border-t border-line-soft pt-3">
             <DeleteButton action={clearOpeningBalance} label="Startguthaben entfernen" />
           </div>
         )}
@@ -63,7 +63,7 @@ async function OpeningBalanceSection() {
         <h2 className="mb-3 font-semibold">Kontostand-Abgleich</h2>
         <dl className="grid gap-2 text-sm">
           <Row label={cash.opening ? `Startguthaben am ${formatDate(cash.opening.date)}` : "Startguthaben"}>
-            {cash.opening ? formatCents(cash.opening.cents) : <span className="text-stone-400">nicht gesetzt</span>}
+            {cash.opening ? formatCents(cash.opening.cents) : <span className="text-ink-4">nicht gesetzt</span>}
           </Row>
           <Row label={cash.opening ? "Buchungen seit dem Stichtag" : "Saldo aller Buchungen"}>
             <span className={signedClass(cash.flowCents)}>
@@ -71,12 +71,12 @@ async function OpeningBalanceSection() {
               {formatCents(cash.flowCents)}
             </span>
           </Row>
-          <div className="flex justify-between border-t border-stone-200 pt-2 font-semibold">
+          <div className="flex justify-between border-t border-line pt-2 font-semibold">
             <dt>Kontostand laut App</dt>
             <dd className="tabular-nums">{formatCents(cash.balanceCents)}</dd>
           </div>
         </dl>
-        <p className="mt-3 text-xs text-stone-500">
+        <p className="mt-3 text-xs text-ink-3">
           Vergleiche den Betrag mit deinem Bankkonto. Weicht er ab, fehlen Buchungen, oder das Startguthaben stimmt nicht.
           {cash.ignoredCount > 0 &&
             ` ${cash.ignoredCount} Buchung${cash.ignoredCount === 1 ? "" : "en"} am oder vor dem Stichtag ${cash.ignoredCount === 1 ? "fließt" : "fließen"} nicht in den Kontostand ein (sie sind im Startguthaben enthalten), zählen aber weiter in den Monatsauswertungen.`}
@@ -89,7 +89,7 @@ async function OpeningBalanceSection() {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-stone-600">{label}</dt>
+      <dt className="text-ink-2">{label}</dt>
       <dd className="tabular-nums">{children}</dd>
     </div>
   );

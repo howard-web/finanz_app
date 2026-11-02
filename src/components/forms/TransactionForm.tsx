@@ -64,9 +64,9 @@ export function TransactionForm({
               className={`cursor-pointer rounded-lg border px-3 py-2 text-center text-sm font-medium ${
                 type === t
                   ? t === "INCOME"
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-800"
-                    : "border-red-400 bg-red-50 text-red-800"
-                  : "border-stone-300 text-stone-600 hover:bg-stone-50"
+                    ? "border-pos bg-pos-soft text-pos"
+                    : "border-neg bg-neg-soft text-neg"
+                  : "border-line-strong text-ink-2 hover:bg-surface-2"
               }`}
             >
               <input
@@ -130,27 +130,27 @@ export function TransactionForm({
 
       <div>
         <label htmlFor="note" className="field-label">
-          Notiz <span className="font-normal text-stone-400">(optional)</span>
+          Notiz <span className="font-normal text-ink-4">(optional)</span>
         </label>
         <input id="note" name="note" defaultValue={v.note} className="field" maxLength={500} />
         <FieldError state={state} name="note" />
       </div>
 
       {allowRecurring && (
-        <div className="rounded-lg bg-stone-50 p-3">
+        <div className="rounded-lg bg-surface-2 p-3">
           <label className="flex items-center gap-2 text-sm font-medium">
             <input
               type="checkbox"
               name="isRecurring"
               checked={recurring}
               onChange={(e) => setOverride({ state, on: e.target.checked })}
-              className="size-4 accent-blue-600"
+              className="size-4"
             />
             Wiederkehrend (Abo, Miete, Gehalt …)
           </label>
           {recurring && (
             <div className="mt-2 flex items-center gap-2 text-sm">
-              <span className="text-stone-600">Intervall:</span>
+              <span className="text-ink-2">Intervall:</span>
               <select name="interval" defaultValue={state.values?.interval ?? "MONTHLY"} className="field w-auto py-1">
                 {RECURRING_INTERVALS.map((i) => (
                   <option key={i} value={i}>
@@ -161,7 +161,7 @@ export function TransactionForm({
             </div>
           )}
           {recurring && (
-            <p className="mt-2 text-xs text-stone-500">
+            <p className="mt-2 text-xs text-ink-3">
               Fällige Buchungen werden automatisch angelegt, auch rückwirkend ab dem Startdatum.
             </p>
           )}

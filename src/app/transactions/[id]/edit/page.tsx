@@ -33,7 +33,7 @@ async function EditForm({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       {t.recurringRuleId && (
-        <p className="mb-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-800">
+        <p className="mb-4 rounded-lg bg-accent-soft p-3 text-xs text-accent-ink">
           Diese Buchung stammt aus einer wiederkehrenden Regel. Änderungen gelten nur für diese eine Buchung.
         </p>
       )}

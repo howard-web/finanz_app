@@ -80,7 +80,7 @@ async function Holdings() {
       <div className="card p-2">
         <PortfolioTable summary={summary} />
       </div>
-      <p className="text-xs text-stone-500">
+      <p className="text-xs text-ink-3">
         Kurse von Yahoo Finance (Cache bis zu 6 h). Fremdwährungen werden mit dem aktuellen Kurs in EUR umgerechnet. Währungsgewinne beim Einstand werden dabei nicht berücksichtigt.
       </p>
     </section>

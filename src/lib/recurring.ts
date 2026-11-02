@@ -6,7 +6,16 @@ import type { RecurringRule } from "@/generated/prisma/client";
 
 /** Termin Nr. k einer Regel. Immer vom Startdatum aus gerechnet, damit z.B. der 31. nicht wandert. */
 export function occurrence(rule: Pick<RecurringRule, "startDate" | "interval">, k: number): Date {
-  return addMonthsUTC(rule.startDate, rule.interval === "YEARLY" ? 12 * k : k);
+  switch (rule.interval) {
+    case "WEEKLY":
+      return new Date(rule.startDate.getTime() + k * 7 * 86_400_000);
+    case "QUARTERLY":
+      return addMonthsUTC(rule.startDate, 3 * k);
+    case "YEARLY":
+      return addMonthsUTC(rule.startDate, 12 * k);
+    default:
+      return addMonthsUTC(rule.startDate, k);
+  }
 }
 
 /** Monate addieren in UTC; Monatsende wird geklemmt (31.01. + 1 Monat = 28./29.02.). */

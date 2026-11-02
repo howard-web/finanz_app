@@ -48,13 +48,13 @@ async function RecurringList() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Fixkosten pro Monat" value={formatCents(fixedCosts)} hint="jährliche anteilig umgerechnet" />
+        <StatCard label="Fixkosten pro Monat" value={formatCents(fixedCosts)} hint="andere Intervalle anteilig umgerechnet" />
         <StatCard label="Fixkosten pro Jahr" value={formatCents(fixedCosts * 12)} />
         <StatCard label="Aktive Regeln" value={String(rules.filter((r) => r.active).length)} />
       </div>
       <div className="card overflow-x-auto p-2">
         <table className="w-full">
-          <thead className="border-b border-stone-200">
+          <thead className="border-b border-line">
             <tr>
               <th className="th-cell">Kategorie</th>
               <th className="th-cell">Notiz</th>
@@ -64,17 +64,17 @@ async function RecurringList() {
               <th className="th-cell" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-stone-100">
+          <tbody className="divide-y divide-line-soft">
             {rules.map((r) => (
-              <tr key={r.id} className={r.active ? "" : "text-stone-400"}>
+              <tr key={r.id} className={r.active ? "" : "text-ink-4"}>
                 <td className="td-cell">{r.category}</td>
-                <td className="td-cell text-stone-500">{r.note}</td>
+                <td className="td-cell text-ink-3">{r.note}</td>
                 <td className="td-cell">{INTERVAL_LABELS[r.interval as RecurringInterval]}</td>
                 <td className="td-cell tabular-nums">
                   {r.active ? formatDate(r.nextDue) : <span className="text-xs font-medium">pausiert</span>}
-                  <div className="text-xs text-stone-400">{r._count.transactions} gebucht seit {formatDate(r.startDate)}</div>
+                  <div className="text-xs text-ink-4">{r._count.transactions} gebucht seit {formatDate(r.startDate)}</div>
                 </td>
-                <td className={`td-cell text-right font-medium tabular-nums ${r.type === "INCOME" ? "text-emerald-700" : ""}`}>
+                <td className={`td-cell text-right font-medium tabular-nums ${r.type === "INCOME" ? "text-pos" : ""}`}>
                   {r.type === "INCOME" ? "+" : "−"}
                   {formatCents(r.amountCents)}
                 </td>
@@ -90,7 +90,7 @@ async function RecurringList() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-stone-500">
+      <p className="text-xs text-ink-3">
         Beim Löschen einer Regel bleiben bereits gebuchte Transaktionen erhalten. Beim Fortsetzen werden verpasste Termine nicht nachgebucht.
       </p>
     </div>

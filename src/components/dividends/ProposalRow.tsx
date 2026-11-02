@@ -30,22 +30,22 @@ export function ProposalRow({ p, taxRateLabel }: { p: ProposalView; taxRateLabel
       <div>
         <div className="flex flex-wrap items-baseline gap-x-2">
           <span className="font-semibold">{p.symbol}</span>
-          <span className="truncate text-sm text-stone-500">{p.name}</span>
+          <span className="truncate text-sm text-ink-3">{p.name}</span>
         </div>
-        <div className="mt-0.5 text-sm text-stone-600">
+        <div className="mt-0.5 text-sm text-ink-2">
           Ex-Tag {p.exDateLabel} · {p.shares.toLocaleString("de-DE")} × {formatMoney(p.amountPerShare, p.currency)} ={" "}
           <span className="font-medium tabular-nums">{formatEUR(p.grossEUR)} brutto</span>
-          <span className="text-stone-400"> · ≈ {formatEUR(p.netEstimateEUR)} netto ({taxRateLabel} Steuer)</span>
+          <span className="text-ink-4"> · ≈ {formatEUR(p.netEstimateEUR)} netto ({taxRateLabel} Steuer)</span>
         </div>
         {p.candidate && (
-          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent-ink">
             <span>
               Passende Buchung gefunden: <strong>{p.candidate.dateLabel}</strong> · {p.candidate.label} ·{" "}
               <strong className="tabular-nums">{formatCents(p.candidate.amountCents)}</strong>
             </span>
             <button
               type="button"
-              className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
               disabled={busy}
               onClick={() => startTransition(() => linkDividend(p.key, p.candidate!.id))}
             >
@@ -58,10 +58,10 @@ export function ProposalRow({ p, taxRateLabel }: { p: ProposalView; taxRateLabel
       <form action={formAction} className="flex flex-wrap items-start gap-2">
         <div>
           <label className="sr-only" htmlFor={`amount-${p.key}`}>Erhaltener Betrag</label>
-          <div className="relative">
+          <div className="relative w-28">
             <input id={`amount-${p.key}`} name="amount" defaultValue={v.amount} inputMode="decimal"
-              className="field w-28 pr-6 text-right tabular-nums" title="Tatsächlich erhaltener Betrag (netto)" />
-            <span className="pointer-events-none absolute top-2 right-2 text-sm text-stone-400">€</span>
+              className="field pr-6 text-right tabular-nums" title="Tatsächlich erhaltener Betrag (netto)" />
+            <span className="pointer-events-none absolute top-2 right-2 text-sm text-ink-4">€</span>
           </div>
           <FieldError state={state} name="amount" />
         </div>

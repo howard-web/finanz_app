@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { HandCoins } from "lucide-react";
 import { connection } from "next/server";
 import { ExpenseBars } from "@/components/charts/ExpenseBars";
 import { PortfolioLine } from "@/components/charts/PortfolioLine";
@@ -15,7 +16,7 @@ import { materializeRecurring } from "@/lib/recurring";
 export default function DashboardPage({ searchParams }: PageProps<"/">) {
   return (
     <>
-      <PageHeader title="Dashboard" />
+      <PageHeader title="Dashboard" subtitle="Dein Überblick über Konto, Depot und Ausgaben" />
       <Suspense fallback={null}>
         <DividendNotice />
       </Suspense>
@@ -42,10 +43,11 @@ async function DividendNotice() {
   return (
     <Link
       href="/dividends"
-      className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 hover:bg-blue-100"
+      className="mb-5 flex items-center justify-between gap-2 rounded-xl border border-accent-line bg-accent-soft px-4 py-3 text-sm text-accent-ink hover:bg-accent/15"
     >
       <span>
-        💰 {proposals.length} neue Dividende{proposals.length === 1 ? "" : "n"} erkannt ({formatEUR(gross)} brutto). Jetzt prüfen und buchen.
+        <HandCoins aria-hidden className="mr-2 inline size-[1.1em] align-[-0.15em]" />
+        {proposals.length} neue Dividende{proposals.length === 1 ? "" : "n"} erkannt ({formatEUR(gross)} brutto). Jetzt prüfen und buchen.
       </span>
       <span aria-hidden>→</span>
     </Link>
@@ -76,7 +78,7 @@ async function Stats() {
     <>
       {portfolio.hasStaleData && <Notice>Einige Kurse sind veraltet. Net Worth basiert auf den zuletzt bekannten Werten.</Notice>}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Net Worth" value={formatEUR(netWorth)} hint="Kontostand + Depotwert" />
+        <StatCard featured label="Net Worth" value={formatEUR(netWorth)} hint="Kontostand + Depotwert" />
         <StatCard
           label="Kontostand"
           value={formatCents(cash.balanceCents)}
@@ -97,7 +99,7 @@ async function Stats() {
           value={formatEUR(portfolio.totalValueEUR)}
           hint={
             portfolio.positions.length > 0 ? (
-              <span className={portfolio.totalPnlEUR >= 0 ? "text-emerald-700" : "text-red-700"}>
+              <span className={portfolio.totalPnlEUR >= 0 ? "text-pos" : "text-neg"}>
                 G/V {formatEUR(portfolio.totalPnlEUR)}
                 {portfolio.totalPnlPct !== null && ` (${formatPercent(portfolio.totalPnlPct)})`}
               </span>
@@ -126,7 +128,7 @@ async function ExpensesCard({ searchParams }: { searchParams: PageProps<"/">["se
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="font-semibold">Ausgaben nach Kategorie</h2>
-          <p className="text-sm text-stone-500">
+          <p className="text-sm text-ink-3">
             {formatMonth(month)}: {formatCents(total)}
           </p>
         </div>
@@ -143,7 +145,7 @@ async function PortfolioCard() {
   return (
     <section className="card">
       <h2 className="font-semibold">Depotwert-Entwicklung</h2>
-      <p className="mb-2 text-sm text-stone-500">Historische Schlusskurse × Bestand ab Kaufdatum, in EUR</p>
+      <p className="mb-2 text-sm text-ink-3">Historische Schlusskurse × Bestand ab Kaufdatum, in EUR</p>
       {history.length > 1 ? (
         <PortfolioLine data={history} />
       ) : (

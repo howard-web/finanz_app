@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FileUp } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { analyzeImport, importTransactions, undoImport, type ImportResult } from "@/actions/import";
 import { categoriesFor } from "@/lib/categories";
@@ -25,9 +26,9 @@ const EMPTY_MAPPING: ColumnMapping = {
 const DELIMITER_LABEL: Record<string, string> = { ";": "Semikolon", ",": "Komma", "\t": "Tab" };
 
 const STATUS_LABEL: Record<RowStatus, { label: string; className: string }> = {
-  new: { label: "Neu", className: "bg-emerald-50 text-emerald-800" },
-  "possible-duplicate": { label: "Mögliches Duplikat", className: "bg-amber-50 text-amber-900" },
-  imported: { label: "Bereits importiert", className: "bg-stone-100 text-stone-500" },
+  new: { label: "Neu", className: "bg-pos-soft text-pos" },
+  "possible-duplicate": { label: "Mögliches Duplikat", className: "bg-warn-soft text-warn-ink" },
+  imported: { label: "Bereits importiert", className: "bg-surface-2 text-ink-3" },
 };
 
 const shortDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
@@ -158,7 +159,7 @@ export function ImportWizard() {
           <>
             <h2 className="text-lg font-semibold">✓ {result.created} Buchungen importiert</h2>
             {result.skipped > 0 && (
-              <p className="mt-1 text-sm text-stone-500">{result.skipped} waren bereits vorhanden und wurden übersprungen.</p>
+              <p className="mt-1 text-sm text-ink-3">{result.skipped} waren bereits vorhanden und wurden übersprungen.</p>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
               {result.months.length > 0 && (
@@ -175,7 +176,7 @@ export function ImportWizard() {
         ) : (
           <>
             <h2 className="text-lg font-semibold">Import rückgängig gemacht</h2>
-            <p className="mt-1 text-sm text-stone-500">{undone} Buchungen wurden entfernt.</p>
+            <p className="mt-1 text-sm text-ink-3">{undone} Buchungen wurden entfernt.</p>
             <button type="button" className="btn-secondary mt-4" onClick={reset}>Neue Datei importieren</button>
           </>
         )}
@@ -188,7 +189,7 @@ export function ImportWizard() {
     return (
       <section className="grid gap-3">
         <label
-          className="card flex cursor-pointer flex-col items-center justify-center gap-2 border-2 border-dashed py-14 text-center hover:border-blue-400 hover:bg-blue-50/30"
+          className="card flex cursor-pointer flex-col items-center justify-center gap-2 border-2 border-dashed py-14 text-center hover:border-accent hover:bg-accent-soft"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
@@ -196,9 +197,9 @@ export function ImportWizard() {
             if (f) handleFile(f);
           }}
         >
-          <span className="text-3xl" aria-hidden>📄</span>
+          <span className="mb-1 flex size-[2.6em] items-center justify-center rounded-2xl bg-accent-soft text-accent-ink"><FileUp aria-hidden className="size-[1.3em]" /></span>
           <span className="font-medium">CSV-Kontoauszug hierher ziehen oder auswählen</span>
-          <span className="text-sm text-stone-500">
+          <span className="text-sm text-ink-3">
             Automatisch erkannt: Sparkasse, ING, DKB, comdirect, Volksbank, N26. Andere Banken lassen sich manuell zuordnen.
           </span>
           <input
@@ -212,8 +213,8 @@ export function ImportWizard() {
             }}
           />
         </label>
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        <p className="text-xs text-stone-500">Die Datei wird im Browser gelesen. An den Server gehen nur Datum, Betrag, Gegenpartei und Verwendungszweck.</p>
+        {error && <p className="text-sm text-neg">{error}</p>}
+        <p className="text-xs text-ink-3">Die Datei wird im Browser gelesen. An den Server gehen nur Datum, Betrag, Gegenpartei und Verwendungszweck.</p>
       </section>
     );
   }
@@ -243,7 +244,7 @@ export function ImportWizard() {
         <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="font-semibold">{file.name}</h2>
-            <p className="text-sm text-stone-500">
+            <p className="text-sm text-ink-3">
               {file.bank ? `${file.bank} erkannt · ` : ""}
               {file.encoding} · {DELIMITER_LABEL[file.delimiter] ?? file.delimiter} · {extracted.rows.length} Buchungen
               {extracted.skipped > 0 && ` · ${extracted.skipped} Zeilen ohne Datum/Betrag ignoriert`}
@@ -274,20 +275,20 @@ export function ImportWizard() {
         </div>
 
         <label className="mt-3 flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={invertSign} onChange={(e) => { setInvertSign(e.target.checked); setAnalysis(null); }} className="size-4 accent-blue-600" />
+          <input type="checkbox" checked={invertSign} onChange={(e) => { setInvertSign(e.target.checked); setAnalysis(null); }} className="size-4" />
           Vorzeichen umkehren (z.B. Kreditkarten-Abrechnungen, bei denen Ausgaben positiv sind)
         </label>
 
         {mappingComplete && extracted.rows.length > 0 && !analysis && (
           <div className="mt-4">
-            <p className="mb-2 text-xs font-semibold tracking-wide text-stone-500 uppercase">Vorschau</p>
+            <p className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">Vorschau</p>
             <table className="w-full text-sm">
-              <tbody className="divide-y divide-stone-100">
+              <tbody className="divide-y divide-line-soft">
                 {extracted.rows.slice(0, 5).map((r, i) => (
                   <tr key={i}>
-                    <td className="py-1.5 pr-3 whitespace-nowrap text-stone-600 tabular-nums">{shortDate(r.date)}</td>
-                    <td className="py-1.5 pr-3">{r.counterparty}<span className="text-stone-400"> {r.purpose}</span></td>
-                    <td className={`py-1.5 text-right whitespace-nowrap tabular-nums ${r.amountCents > 0 ? "text-emerald-700" : ""}`}>
+                    <td className="py-1.5 pr-3 whitespace-nowrap text-ink-2 tabular-nums">{shortDate(r.date)}</td>
+                    <td className="py-1.5 pr-3">{r.counterparty}<span className="text-ink-4"> {r.purpose}</span></td>
+                    <td className={`py-1.5 text-right whitespace-nowrap tabular-nums ${r.amountCents > 0 ? "text-pos" : ""}`}>
                       {r.amountCents > 0 ? "+" : "−"}{formatCents(Math.abs(r.amountCents))}
                     </td>
                   </tr>
@@ -297,7 +298,7 @@ export function ImportWizard() {
           </div>
         )}
 
-        {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+        {error && <p className="mt-3 text-sm text-neg">{error}</p>}
 
         {!analysis && (
           <button type="button" className="btn-primary mt-4" disabled={!mappingComplete || extracted.rows.length === 0 || pending} onClick={analyze}>
@@ -308,39 +309,39 @@ export function ImportWizard() {
 
       {analysis && counts && (
         <section className="card p-0">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">
             <div className="flex flex-wrap gap-1" role="group" aria-label="Filter">
               {(["all", "new", "possible-duplicate", "imported"] as const).map((f) => (
                 <button key={f} type="button" onClick={() => setFilter(f)} aria-pressed={filter === f}
-                  className={`rounded-md px-2.5 py-1 text-xs font-medium ${filter === f ? "bg-stone-900 text-white" : "text-stone-600 hover:bg-stone-100"}`}>
+                  className={`rounded-md px-2.5 py-1 text-xs font-medium ${filter === f ? "bg-ink text-canvas" : "text-ink-2 hover:bg-surface-2"}`}>
                   {f === "all" ? "Alle" : STATUS_LABEL[f].label} ({counts[f]})
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-stone-600">{selectedCount} ausgewählt</span>
+              <span className="text-sm text-ink-2">{selectedCount} ausgewählt</span>
               <button type="button" className="btn-primary" disabled={selectedCount === 0 || pending} onClick={runImport}>
                 {pending ? "Importiere …" : `${selectedCount} importieren`}
               </button>
             </div>
           </div>
-          {error && <p className="px-4 pt-3 text-sm text-red-700">{error}</p>}
+          {error && <p className="px-4 pt-3 text-sm text-neg">{error}</p>}
           {counts["possible-duplicate"] > 0 && (
-            <p className="mx-4 mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <p className="mx-4 mt-3 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn-ink">
               „Mögliches Duplikat“ heißt: Es gibt schon eine manuelle oder Abo-Buchung mit gleichem Betrag innerhalb von ±3 Tagen. Diese Zeilen sind standardmäßig abgewählt.
             </p>
           )}
           <div className="max-h-[65vh] overflow-auto p-2">
             <table className="w-full">
-              <thead className="sticky top-0 bg-white">
-                <tr className="border-b border-stone-200">
+              <thead className="sticky top-0 bg-surface">
+                <tr className="border-b border-line">
                   <th className="th-cell w-8">
                     <input type="checkbox" aria-label="Alle sichtbaren auswählen" checked={allVisibleSelected}
                       onChange={(e) => {
                         const ids = new Set(selectable.map((a) => a.index));
                         setChoices((cs) => cs.map((c, i) => (ids.has(i) ? { ...c, include: e.target.checked } : c)));
                       }}
-                      className="size-4 accent-blue-600" />
+                      className="size-4" />
                   </th>
                   <th className="th-cell">Datum</th>
                   <th className="th-cell">Gegenpartei / Zweck</th>
@@ -349,24 +350,24 @@ export function ImportWizard() {
                   <th className="th-cell">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody className="divide-y divide-line-soft">
                 {visible.map((a) => {
                   const r = extracted.rows[a.index];
                   const c = choices[a.index];
                   const disabled = a.status === "imported";
                   return (
-                    <tr key={a.index} className={disabled ? "text-stone-400" : c.include ? "" : "text-stone-500"}>
+                    <tr key={a.index} className={disabled ? "text-ink-4" : c.include ? "" : "text-ink-3"}>
                       <td className="td-cell">
                         <input type="checkbox" checked={c.include && !disabled} disabled={disabled} aria-label="Importieren"
                           onChange={(e) => setChoices((cs) => cs.map((x, i) => (i === a.index ? { ...x, include: e.target.checked } : x)))}
-                          className="size-4 accent-blue-600" />
+                          className="size-4" />
                       </td>
                       <td className="td-cell whitespace-nowrap tabular-nums">{shortDate(r.date)}</td>
                       <td className="td-cell max-w-md">
                         <div className="truncate font-medium">{r.counterparty || "–"}</div>
-                        <div className="truncate text-xs text-stone-500" title={r.purpose}>{r.purpose}</div>
+                        <div className="truncate text-xs text-ink-3" title={r.purpose}>{r.purpose}</div>
                       </td>
-                      <td className={`td-cell text-right font-medium whitespace-nowrap tabular-nums ${r.amountCents > 0 ? "text-emerald-700" : ""}`}>
+                      <td className={`td-cell text-right font-medium whitespace-nowrap tabular-nums ${r.amountCents > 0 ? "text-pos" : ""}`}>
                         {r.amountCents > 0 ? "+" : "−"}{formatCents(Math.abs(r.amountCents))}
                       </td>
                       <td className="td-cell">
@@ -377,21 +378,21 @@ export function ImportWizard() {
                           ))}
                         </select>
                         {!c.touched && !disabled && a.suggestionSource === "history" && (
-                          <div className="mt-0.5 text-[10px] text-blue-700">gelernt</div>
+                          <div className="mt-0.5 text-[0.625rem] text-accent-ink">gelernt</div>
                         )}
                       </td>
                       <td className="td-cell">
-                        <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap ${STATUS_LABEL[a.status].className}`}>
+                        <span className={`rounded px-1.5 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap ${STATUS_LABEL[a.status].className}`}>
                           {STATUS_LABEL[a.status].label}
                         </span>
-                        {a.match && <div className="mt-0.5 max-w-48 truncate text-[10px] text-stone-500" title={a.match}>vorhanden: {a.match}</div>}
+                        {a.match && <div className="mt-0.5 max-w-48 truncate text-[0.625rem] text-ink-3" title={a.match}>vorhanden: {a.match}</div>}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-            {visible.length === 0 && <p className="p-6 text-center text-sm text-stone-500">Keine Zeilen in diesem Filter.</p>}
+            {visible.length === 0 && <p className="p-6 text-center text-sm text-ink-3">Keine Zeilen in diesem Filter.</p>}
           </div>
         </section>
       )}
@@ -410,7 +411,7 @@ function MappingSelect({
 }) {
   return (
     <label className="block">
-      <span className="field-label">{label}{required && <span className="text-red-600"> *</span>}</span>
+      <span className="field-label">{label}{required && <span className="text-neg"> *</span>}</span>
       <select className="field" value={value === null ? "" : String(value)} onChange={(e) => onChange(e.target.value)}>
         {!required && <option value="">– keine –</option>}
         {required && value === null && <option value="">Bitte wählen</option>}

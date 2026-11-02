@@ -59,7 +59,7 @@ export function RecurringRuleForm({ action, defaults }: Props) {
         <label htmlFor="note" className="field-label">Notiz</label>
         <input id="note" name="note" defaultValue={v.note} className="field" maxLength={500} />
       </div>
-      <p className="text-xs text-stone-500">Änderungen gelten für künftige Buchungen. Bereits gebuchte bleiben unverändert.</p>
+      <p className="text-xs text-ink-3">Änderungen gelten für künftige Buchungen. Bereits gebuchte bleiben unverändert.</p>
       <div className="flex items-center gap-3">
         <button type="submit" className="btn-primary" disabled={pending}>
           {pending ? "Speichern …" : "Speichern"}

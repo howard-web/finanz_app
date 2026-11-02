@@ -10,7 +10,7 @@ export function FormMessage({ state }: { state: FormState }) {
   return (
     <p
       role="status"
-      className={`text-sm ${state.ok ? "text-emerald-700" : "text-red-700"}`}
+      className={`text-sm ${state.ok ? "text-pos" : "text-neg"}`}
     >
       {state.message}
     </p>

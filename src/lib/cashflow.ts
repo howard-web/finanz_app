@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { monthRange } from "@/lib/dates";
+import { INTERVALS_PER_YEAR, type RecurringInterval } from "@/lib/categories";
 
 export type CashBalance = {
   /** Aktueller Kontostand in Cent (Startguthaben + Buchungen nach dem Stichtag). */
@@ -68,10 +69,13 @@ export async function getExpensesByCategory(month: string) {
     .sort((a, b) => b.cents - a.cents);
 }
 
-/** Monatliche Fixkosten aus aktiven Abo-Regeln (jährliche anteilig /12). */
+/** Monatliche Fixkosten aus aktiven Abo-Regeln (andere Intervalle anteilig umgerechnet, z.B. wöchentlich ×52/12). */
 export async function getMonthlyFixedCostsCents(): Promise<number> {
   const rules = await db.recurringRule.findMany({ where: { active: true, type: "EXPENSE" } });
   return Math.round(
-    rules.reduce((s, r) => s + (r.interval === "YEARLY" ? r.amountCents / 12 : r.amountCents), 0),
+    rules.reduce(
+      (s, r) => s + (r.amountCents * (INTERVALS_PER_YEAR[r.interval as RecurringInterval] ?? 12)) / 12,
+      0,
+    ),
   );
 }

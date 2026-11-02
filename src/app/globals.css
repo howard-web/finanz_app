@@ -1,58 +1,187 @@
 @import "tailwindcss";
 
+/* Dark Mode per Klasse auf <html> (gesetzt vom Theme-Skript im Layout). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Semantische Farben – Werte wechseln zwischen Hell und Dunkel (siehe unten). */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+  --color-pos: var(--pos);
+  --color-pos-soft: var(--pos-soft);
+  --color-neg: var(--neg);
+  --color-neg-soft: var(--neg-soft);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-line: var(--warn-line);
+}
+
+/* Breakpoints ×1,5 passend zur Basis-Schriftgröße von 150 %. Media Queries
+   rechnen rem immer mit der Browser-Standardgröße (16px), nicht mit der des
+   html-Elements – ohne Anpassung würden Layouts zu früh mehrspaltig. */
+@theme {
+  --breakpoint-sm: 60rem;
+  --breakpoint-md: 72rem;
+  --breakpoint-lg: 96rem;
+  --breakpoint-xl: 120rem;
+  --breakpoint-2xl: 144rem;
 }
 
 :root {
   color-scheme: light;
-  /* Chart-Farben (validierte Referenzpalette, Slot 1 + Text-Tokens) */
+  --canvas: #f6f6f4;
+  --surface: #ffffff;
+  --surface-2: #f3f2f0;
+  --surface-3: #e8e7e4;
+  --line: #e6e4e0;
+  --line-soft: #efeeeb;
+  --line-strong: #d4d1cc;
+  --ink: #1c1917;
+  --ink-2: #57534e;
+  --ink-3: #78716c;
+  --ink-4: #a8a29e;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-ink: #1d4ed8;
+  --accent-soft: #eef4ff;
+  --accent-line: #bfd3fb;
+  --pos: #047857;
+  --pos-soft: #ecfdf5;
+  --neg: #b91c1c;
+  --neg-soft: #fef2f2;
+  --warn-ink: #78350f;
+  --warn-soft: #fffbeb;
+  --warn-line: #fcd34d;
+  --shadow-card: 0 1px 2px rgb(28 25 23 / 0.04), 0 4px 16px -4px rgb(28 25 23 / 0.06);
+  --glow: rgb(37 99 235 / 0.07);
+
+  /* Charts (validierte Referenzpalette: Slot 1 + Text-Tokens, je Modus) */
   --chart-series-1: #2a78d6;
   --chart-text-secondary: #52514e;
   --chart-grid: #e7e5e4;
+  --chart-cursor: rgb(0 0 0 / 0.04);
+}
+
+.dark {
+  color-scheme: dark;
+  --canvas: #0f0f0e;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --surface-3: #2e2d2b;
+  --line: #2e2d2b;
+  --line-soft: #252423;
+  --line-strong: #403e3b;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --ink-3: #9a988f;
+  --ink-4: #6d6b65;
+  --accent: #2563eb;
+  --accent-hover: #3b82f6;
+  --accent-ink: #93c5fd;
+  --accent-soft: rgb(59 130 246 / 0.14);
+  --accent-line: rgb(59 130 246 / 0.35);
+  --pos: #34d399;
+  --pos-soft: rgb(16 185 129 / 0.14);
+  --neg: #f87171;
+  --neg-soft: rgb(239 68 68 / 0.14);
+  --warn-ink: #fcd34d;
+  --warn-soft: rgb(245 158 11 / 0.12);
+  --warn-line: rgb(245 158 11 / 0.35);
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset;
+  --glow: rgb(59 130 246 / 0.10);
+
+  --chart-series-1: #3987e5;
+  --chart-text-secondary: #c3c2b7;
+  --chart-grid: #2e2d2b;
+  --chart-cursor: rgb(255 255 255 / 0.05);
+}
+
+/* Basis-Schriftgröße 150 %: alle Tailwind-Größen sind rem und skalieren mit.
+   Prozent statt px, damit die Browser-Einstellung des Nutzers respektiert wird. */
+html {
+  font-size: 150%;
 }
 
 body {
-  @apply bg-stone-50 text-stone-900;
+  @apply bg-canvas text-ink;
+  /* dezenter Farbschimmer oben rechts */
+  background-image: radial-gradient(60rem 30rem at 85% -10%, var(--glow), transparent 70%);
+  background-attachment: fixed;
+}
+
+/* Grid-Kinder dürfen schmaler als ihr Inhalt werden, damit breite Tabellen
+   in ihrem overflow-x-auto-Container scrollen statt die Seite zu verbreitern. */
+@layer base {
+  .grid > * {
+    min-width: 0;
+  }
+
+  /* Checkboxen/Radios in Akzentfarbe */
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--accent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 }
 
 @utility card {
-    @apply rounded-xl border border-stone-200 bg-white p-5 shadow-sm;
+  @apply rounded-2xl border border-line bg-surface p-5;
+  box-shadow: var(--shadow-card);
 }
 
 @utility field-label {
-    @apply mb-1 block text-sm font-medium text-stone-700;
+  @apply mb-1.5 block text-sm font-medium text-ink-2;
 }
 
 @utility field {
-    @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm shadow-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:bg-stone-100;
+  @apply w-full rounded-xl border border-line-strong bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-4 focus:border-accent focus:ring-4 focus:ring-accent/15 disabled:bg-surface-2 read-only:bg-surface-2;
 }
 
 @utility field-error {
-    @apply mt-1 text-xs text-red-600;
+  @apply mt-1 text-xs text-neg;
 }
 
 @utility btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
 }
 
 @utility btn-primary {
-    @apply btn bg-blue-600 text-white hover:bg-blue-700;
+  @apply btn bg-accent text-white shadow-sm shadow-accent/25 hover:bg-accent-hover;
 }
 
 @utility btn-secondary {
-    @apply btn border border-stone-300 bg-white text-stone-700 hover:bg-stone-100;
+  @apply btn border border-line-strong bg-surface text-ink-2 hover:bg-surface-2 hover:text-ink;
 }
 
 @utility btn-ghost {
-    @apply rounded-md px-2 py-1 text-xs font-medium text-stone-500 hover:bg-stone-100 hover:text-stone-800;
+  @apply rounded-lg px-2 py-1 text-xs font-medium text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink;
 }
 
 @utility th-cell {
-    @apply px-3 py-2 text-left text-xs font-semibold tracking-wide text-stone-500 uppercase;
+  @apply px-3 py-2.5 text-left text-xs font-medium tracking-wide text-ink-3 uppercase;
 }
 
 @utility td-cell {
-    @apply px-3 py-2.5 text-sm;
+  @apply px-3 py-3 text-sm;
 }

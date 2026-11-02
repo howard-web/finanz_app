@@ -43,7 +43,7 @@ model RecurringRule {
   type         String // "INCOME" | "EXPENSE"
   category     String
   note         String?
-  interval     String // "MONTHLY" | "YEARLY"
+  interval     String // "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY"
   startDate    DateTime
   nextDue      DateTime
   active       Boolean       @default(true)

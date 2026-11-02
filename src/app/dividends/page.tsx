@@ -76,9 +76,9 @@ async function Proposals() {
   return (
     <section>
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-semibold">Neue Dividenden {views.length > 0 && <span className="text-stone-500">({views.length})</span>}</h2>
+        <h2 className="font-semibold">Neue Dividenden {views.length > 0 && <span className="text-ink-3">({views.length})</span>}</h2>
         {dismissedCount > 0 && (
-          <span className="text-xs text-stone-500">
+          <span className="text-xs text-ink-3">
             {dismissedCount} ignoriert · <ActionButton action={restoreDismissedDividends}>wieder anzeigen</ActionButton>
           </span>
         )}
@@ -89,12 +89,12 @@ async function Proposals() {
         </EmptyState>
       ) : (
         <>
-          <div className="card divide-y divide-stone-100 p-0">
+          <div className="card divide-y divide-line-soft p-0">
             {views.map((p) => (
               <ProposalRow key={p.key} p={p} taxRateLabel={taxRateLabel} />
             ))}
           </div>
-          <p className="mt-2 text-xs text-stone-500">
+          <p className="mt-2 text-xs text-ink-3">
             Vorgeschlagen ist das geschätzte Netto mit {taxRateLabel} Steuer (<Link href="/settings" className="underline">ändern</Link>). Trag den Betrag ein, der wirklich auf dem Konto ankam, und als Datum den Tag der Gutschrift (oft einige Tage bis Wochen nach dem Ex-Tag). Hast du die Gutschrift schon per CSV importiert, nutze „Verknüpfen“, sonst wird sie doppelt gezählt.
           </p>
         </>
@@ -121,7 +121,7 @@ async function Received() {
         <h2 className="mb-2 font-semibold">Erhaltene Dividenden</h2>
         <div className="card overflow-x-auto p-2">
           <table className="w-full">
-            <thead className="border-b border-stone-200">
+            <thead className="border-b border-line">
               <tr>
                 <th className="th-cell">Datum</th>
                 <th className="th-cell">Wertpapier</th>
@@ -130,16 +130,16 @@ async function Received() {
                 <th className="th-cell" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-stone-100">
+            <tbody className="divide-y divide-line-soft">
               {rows.map((r) => (
                 <tr key={r.id}>
                   <td className="td-cell whitespace-nowrap tabular-nums">{formatDate(r.date)}</td>
                   <td className="td-cell">
                     <div className="font-medium">{r.assetSymbol}</div>
-                    <div className="max-w-xs truncate text-xs text-stone-500">{r.counterparty}</div>
+                    <div className="max-w-xs truncate text-xs text-ink-3">{r.counterparty}</div>
                   </td>
-                  <td className="td-cell text-xs text-stone-500">{r.importKey ? "CSV-Import, verknüpft" : r.dividendKey ? "gebucht" : "manuell"}</td>
-                  <td className="td-cell text-right font-medium text-emerald-700 tabular-nums">+{formatCents(r.amountCents)}</td>
+                  <td className="td-cell text-xs text-ink-3">{r.importKey ? "CSV-Import, verknüpft" : r.dividendKey ? "gebucht" : "manuell"}</td>
+                  <td className="td-cell text-right font-medium text-pos tabular-nums">+{formatCents(r.amountCents)}</td>
                   <td className="td-cell text-right whitespace-nowrap">
                     {r.importKey ? (
                       <ActionButton action={unlinkDividend.bind(null, r.id)}>Verknüpfung lösen</ActionButton>
@@ -155,7 +155,7 @@ async function Received() {
       </div>
       <div>
         <h2 className="mb-2 font-semibold">Je Wertpapier</h2>
-        <div className="card divide-y divide-stone-100 p-0 text-sm">
+        <div className="card divide-y divide-line-soft p-0 text-sm">
           {[...bySymbol.entries()]
             .sort((a, b) => b[1] - a[1])
             .map(([symbol, cents]) => (
